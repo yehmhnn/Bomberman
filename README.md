@@ -40,6 +40,20 @@ crate destruction and safe bombing, hunting non-aggressive opponents, and full
 competition. See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the experiment plan and
 success criteria.
 
+## First training run
+
+The initial `tabular_q_agent` intentionally handles only navigation and visible
+coins. Train it on the first curriculum stage with:
+
+```bash
+python main.py play --agents tabular_q_agent --train 1 \
+  --scenario coin-heaven --no-gui --n-rounds 1000
+```
+
+Its table is saved as `agent_code/tabular_q_agent/q_table.pkl` after every round,
+so interrupted training can resume from the latest completed episode.
+Bombs remain disabled until safe-bomb and danger-map features are implemented.
+
 ## Reproducibility
 
 - Use fixed `--seed` values for paired comparisons.
