@@ -54,6 +54,22 @@ Its table is saved as `agent_code/tabular_q_agent/q_table.pkl` after every round
 so interrupted training can resume from the latest completed episode.
 Bombs remain disabled until safe-bomb and danger-map features are implemented.
 
+To train Q-learning and SARSA from scratch and evaluate them on the same held-out
+seeds:
+
+```bash
+scripts/run_stage1_experiment.sh --fresh 1000 100
+```
+
+The positional numbers are training rounds per agent and evaluation rounds per
+held-out seed. `--fresh` explicitly removes previous Stage-1 tables first; omit
+it to continue training existing tables.
+
+The two agents deliberately share their state and reward representation. Their
+controlled difference is the TD target: Q-learning uses the largest next-state
+value, while SARSA uses the value of the next action sampled from its current
+epsilon-greedy policy.
+
 ## Reproducibility
 
 - Use fixed `--seed` values for paired comparisons.
