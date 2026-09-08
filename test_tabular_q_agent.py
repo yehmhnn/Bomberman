@@ -42,7 +42,7 @@ class TabularQAgentTests(unittest.TestCase):
 
     def test_state_is_small_and_hashable(self):
         features = state_to_features(game_state())
-        self.assertEqual(len(features), 9)
+        self.assertEqual(len(features), 13)
         self.assertIsInstance(hash(features), int)
 
     def test_q_learning_update_matches_equation(self):

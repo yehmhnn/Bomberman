@@ -25,6 +25,12 @@ SAVE_EVERY_ROUNDS = 1
 
 EVENT_REWARDS = {
     e.COIN_COLLECTED: 10.0,
+    e.CRATE_DESTROYED: 2.5,
+    e.COIN_FOUND: 2.0,
+    e.BOMB_DROPPED: 0.5,
+    e.KILLED_SELF: -30.0,
+    e.GOT_KILLED: -20.0,
+    e.SURVIVED_ROUND: 5.0,
     e.INVALID_ACTION: -2.0,
     e.WAITED: -0.5,
 }
@@ -124,7 +130,7 @@ def reward_from_transition(
     """Combine task reward with policy-invariant potential-based shaping.
 
     F(s,s') = gamma * Phi(s') - Phi(s), where Phi is negative distance to a
-    coin. This provides dense feedback while preserving the optimal policy of
+    a visible coin or bombable crate. This provides dense feedback while preserving the optimal policy of
     the underlying discounted MDP.
     """
     reward = STEP_REWARD + sum(EVENT_REWARDS.get(event, 0.0) for event in events)

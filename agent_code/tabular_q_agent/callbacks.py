@@ -1,7 +1,6 @@
 """Action selection and state representation for a tabular Q-learning agent.
 
-This first version intentionally targets the ``coin-heaven`` scenario. It learns
-movement and coin collection before bombs and opponents are introduced.
+This version supports the coin and crate-destruction curriculum stages.
 """
 
 from collections import deque
@@ -9,6 +8,8 @@ from pathlib import Path
 import pickle
 
 import numpy as np
+
+from .danger import can_escape_after_bomb, danger_steps
 
 
 ACTIONS = ("UP", "RIGHT", "DOWN", "LEFT", "WAIT", "BOMB")
@@ -60,32 +61,32 @@ def q_values(q_table: dict, state: tuple) -> np.ndarray:
 
 
 def valid_action_indices(game_state: dict) -> np.ndarray:
-    """Return executable Stage-1 actions (four moves plus WAIT).
-
-    Masking walls is part of the environment interface, not the learned policy.
-    BOMB is intentionally disabled until the Stage-2 danger representation is
-    implemented.
-    """
+    """Return executable actions that do not cause an immediate known death."""
     field = game_state["field"]
     x, y = game_state["self"][3]
     occupied = {position for position, _ in game_state["bombs"]}
     occupied.update(other[3] for other in game_state["others"])
+    danger = danger_steps(game_state)
 
     allowed = []
     for index, (dx, dy) in enumerate(MOVE_DELTAS):
         target = (x + dx, y + dy)
-        if field[target] == 0 and target not in occupied:
+        if field[target] == 0 and target not in occupied and danger[target] > 1:
             allowed.append(index)
-    allowed.append(ACTIONS.index("WAIT"))
+    if danger[x, y] > 1:
+        allowed.append(ACTIONS.index("WAIT"))
+    if game_state["self"][2] and can_escape_after_bomb(game_state):
+        allowed.append(ACTIONS.index("BOMB"))
+    if not allowed:
+        allowed.append(ACTIONS.index("WAIT"))
     return np.asarray(allowed, dtype=np.int64)
 
 
 def state_to_features(game_state: dict) -> tuple:
     """Compress a large game state into a small, hashable Markov-state proxy.
 
-    The tuple contains four passability bits, four bits identifying first steps
-    on shortest paths to the nearest coin, and a coarse distance bucket. States
-    with the same tuple share the same row of the Q table.
+    The tuple contains movement safety, objective direction/distance, current
+    danger, bomb availability, escape feasibility, and nearby crates.
     """
     if game_state is None:
         return None
@@ -95,16 +96,38 @@ def state_to_features(game_state: dict) -> tuple:
     directions, distance = shortest_coin_directions(game_state)
     coin_directions = tuple(int(index in directions) for index in range(4))
     distance_bucket = min(distance, 5) if distance is not None else 0
-    return passable + coin_directions + (distance_bucket,)
+    x, y = game_state["self"][3]
+    danger = danger_steps(game_state)[x, y]
+    danger_bucket = 5 if np.isinf(danger) else min(int(danger), 4)
+    bomb_available = int(game_state["self"][2])
+    safe_bomb = int(bomb_available and can_escape_after_bomb(game_state))
+    field = game_state["field"]
+    adjacent_crates = min(
+        sum(field[x + dx, y + dy] == 1 for dx, dy in MOVE_DELTAS), 2
+    )
+    return passable + coin_directions + (
+        distance_bucket,
+        danger_bucket,
+        bomb_available,
+        safe_bomb,
+        adjacent_crates,
+    )
 
 
 def shortest_coin_directions(game_state: dict) -> tuple:
-    """Find all first moves belonging to a shortest path to any visible coin."""
-    coins = set(game_state["coins"])
-    if not coins:
+    """Find shortest first moves to a visible coin or a bombable crate tile."""
+    field = game_state["field"]
+    targets = set(game_state["coins"])
+    if not targets:
+        crates = set(map(tuple, np.argwhere(field == 1)))
+        for crate_x, crate_y in crates:
+            for dx, dy in MOVE_DELTAS:
+                candidate = (crate_x + dx, crate_y + dy)
+                if field[candidate] == 0:
+                    targets.add(candidate)
+    if not targets:
         return set(), None
 
-    field = game_state["field"]
     start = game_state["self"][3]
     blocked = {position for position, _ in game_state["bombs"]}
     blocked.update(other[3] for other in game_state["others"])
@@ -123,7 +146,7 @@ def shortest_coin_directions(game_state: dict) -> tuple:
         position, distance, first_direction = queue.popleft()
         if best_distance is not None and distance > best_distance:
             break
-        if position in coins:
+        if position in targets:
             best_distance = distance
             best_directions.add(first_direction)
             continue
@@ -144,7 +167,7 @@ def shortest_coin_directions(game_state: dict) -> tuple:
 
 
 def coin_potential(game_state: dict) -> float:
-    """Potential Phi(s) = negative shortest-path distance to a visible coin."""
+    """Potential Phi(s) = negative distance to the current coin/crate objective."""
     if game_state is None:
         return 0.0
     _, distance = shortest_coin_directions(game_state)

@@ -52,7 +52,17 @@ python main.py play --agents tabular_q_agent --train 1 \
 
 Its table is saved as `agent_code/tabular_q_agent/q_table.pkl` after every round,
 so interrupted training can resume from the latest completed episode.
-Bombs remain disabled until safe-bomb and danger-map features are implemented.
+
+Stage 2 now enables bombs when a time-aware search finds an escape route. A
+short crate-training run can be started with:
+
+```bash
+python main.py play --agents tabular_sarsa_agent --train 1 \
+  --scenario loot-crate --no-gui --n-rounds 500
+```
+
+This stage is still experimental: escape feasibility prevents obviously trapped
+bomb placements, but the learned policy must still learn the multi-step escape.
 
 To train Q-learning and SARSA from scratch and evaluate them on the same held-out
 seeds:

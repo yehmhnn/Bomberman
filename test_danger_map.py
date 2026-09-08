@@ -9,6 +9,7 @@ from agent_code.tabular_q_agent.danger import (
     can_escape_after_bomb,
     danger_steps,
 )
+from agent_code.tabular_q_agent.callbacks import ACTIONS, valid_action_indices
 
 
 def state(field, position=(3, 3), bombs=(), explosion=()):
@@ -57,6 +58,15 @@ class DangerMapTests(unittest.TestCase):
         corridor[1:5, 3] = 0
         trapped = state(corridor, position=(1, 3))
         self.assertFalse(can_escape_after_bomb(trapped))
+
+    def test_bomb_action_requires_an_escape_route(self):
+        open_actions = valid_action_indices(state(self.field))
+        self.assertIn(ACTIONS.index("BOMB"), open_actions)
+
+        corridor = -np.ones((9, 9), dtype=int)
+        corridor[1:5, 3] = 0
+        trapped_actions = valid_action_indices(state(corridor, position=(1, 3)))
+        self.assertNotIn(ACTIONS.index("BOMB"), trapped_actions)
 
 
 if __name__ == "__main__":

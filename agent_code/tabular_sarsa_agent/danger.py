@@ -54,7 +54,7 @@ def can_escape_after_bomb(game_state, max_moves=4):
             if (
                 field[target] == 0
                 and target not in blocked
-                and known_danger[target] != arrival
+                and known_danger[target] > arrival
                 and (target, arrival) not in visited
             ):
                 visited.add((target, arrival))
