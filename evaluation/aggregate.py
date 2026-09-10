@@ -1,4 +1,4 @@
-"""Summarize raw benchmark CSVs: mean + bootstrap CI per (tag, scenario, agent_code)."""
+"""Summarize raw benchmark CSVs: per-match mean + bootstrap CI per (tag, scenario, agent_code)."""
 from __future__ import annotations
 
 import argparse
@@ -15,7 +15,8 @@ RAW_DIR = REPO_ROOT / "evaluation" / "results" / "raw"
 SUMMARY_DIR = REPO_ROOT / "evaluation" / "results" / "summary"
 
 METRICS = ["score", "coins", "kills", "suicides", "suicide", "crates",
-           "invalid", "alive_steps", "rank", "win", "survived"]
+           "invalid", "alive_steps", "rank", "win", "survived",
+           "time", "think_time_mean"]
 
 
 def load_rows(paths):
@@ -31,23 +32,35 @@ def main():
     p.add_argument("--tags", nargs="*", default=[], help="raw CSV stems to include (empty = all)")
     args = p.parse_args()
 
-    paths = [RAW_DIR / (t + ".csv") for t in args.tags] if args.tags else sorted(RAW_DIR.glob("*.csv"))
+    if args.tags:
+        paths = [RAW_DIR / (t + ".csv") for t in args.tags]
+    else:
+        paths = sorted(p for p in RAW_DIR.glob("*.csv") if not p.stem.startswith("smoke"))
     if not paths:
         print("no CSV under evaluation/results/raw/. Run benchmark.py first.")
         return
     rows = load_rows(paths)
 
-    groups = defaultdict(lambda: defaultdict(list))
+    # Collapse to one value per match before bootstrapping. The agent rows of a
+    # self-play match are not independent (e.g. their coins sum to the board
+    # total), so resampling rows would understate the CI. Average the same-code
+    # agents within each match, then bootstrap over the per-match values.
+    per_match = defaultdict(lambda: defaultdict(list))
     for r in rows:
-        key = (r["tag"], r["scenario"], r["agent_code"])
+        key = (r["tag"], r["scenario"], r["agent_code"], r["seed"])
         for m in METRICS:
-            groups[key][m].append(float(r[m]))
+            per_match[key][m].append(float(r[m]))
+
+    groups = defaultdict(lambda: defaultdict(list))
+    for (tag, scenario, code, _seed), md in per_match.items():
+        for m in METRICS:
+            groups[(tag, scenario, code)][m].append(sum(md[m]) / len(md[m]))
 
     SUMMARY_DIR.mkdir(parents=True, exist_ok=True)
     out = SUMMARY_DIR / "summary.csv"
     with open(str(out), "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
-        w.writerow(["tag", "scenario", "agent_code", "n", "metric", "mean", "ci_lo", "ci_hi"])
+        w.writerow(["tag", "scenario", "agent_code", "n_matches", "metric", "mean", "ci_lo", "ci_hi"])
         for (tag, scenario, code), md in sorted(groups.items()):
             n = len(md["score"])
             for m in METRICS:
@@ -56,7 +69,7 @@ def main():
                             f"{mean:.3f}", f"{lo:.3f}", f"{hi:.3f}"])
 
     print(f"\nwrote {out}\n")
-    print("| tag | scenario | agent | n | score (95% CI) | survival | suicide |")
+    print("| tag | scenario | agent | n_matches | score (95% CI) | survival | suicide |")
     print("|---|---|---|--:|---|--:|--:|")
     for (tag, scenario, code), md in sorted(groups.items()):
         n = len(md["score"])

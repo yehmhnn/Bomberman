@@ -7,8 +7,9 @@ from collections import Counter
 import numpy as np
 
 # Keys that environment.py accumulates in lifetime_statistics
-# (via note_stat calls and agents.py EVENT_STAT_MAP).
-STAT_KEYS = ("score", "coins", "kills", "suicides", "crates", "bombs", "moves", "invalid", "steps")
+# (via note_stat calls and agents.py EVENT_STAT_MAP). "time" is the agent's
+# cumulative think time in seconds over the turns it acted.
+STAT_KEYS = ("score", "coins", "kills", "suicides", "crates", "bombs", "moves", "invalid", "steps", "time")
 
 
 def load_stats(path):
@@ -52,6 +53,8 @@ def rows_from_stats(stats, agents, meta):
         )
         for k in STAT_KEYS:
             row[k] = float(a.get(k, 0))
+        # Mean per-move decision time; the tournament limit is 0.5 s per move.
+        row["think_time_mean"] = row["time"] / alive_steps if alive_steps else float("nan")
         rows.append(row)
 
     # Within-match ranking on official score (1 = best); average rank for ties.

@@ -3,7 +3,7 @@
 Example:
     python evaluation/benchmark.py --tag base_4rule \
         --agents rule_based_agent rule_based_agent rule_based_agent rule_based_agent \
-        --scenarios classic coin-heaven --split test
+        --scenarios classic coin-heaven --split val
 """
 from __future__ import annotations
 
@@ -39,7 +39,12 @@ def run_match(agents, scenario, seed, rounds=1):
         "--save-stats", str(stats_path),
     ]
     t0 = time.perf_counter()
-    proc = subprocess.run(cmd, cwd=str(REPO_ROOT), capture_output=True, text=True)
+    try:
+        proc = subprocess.run(
+            cmd, cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=180
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"match timed out after 180s (seed={seed}, {scenario})")
     wall = time.perf_counter() - t0
     if proc.returncode != 0:
         raise RuntimeError(
@@ -68,10 +73,14 @@ def main():
     p.add_argument("--tag", required=True, help="short label for this run; used as the CSV file name")
     p.add_argument("--agents", nargs="+", required=True)
     p.add_argument("--scenarios", nargs="+", default=["classic"])
-    p.add_argument("--split", choices=sorted(ALL_SEEDS), default="test")
+    p.add_argument("--split", choices=sorted(ALL_SEEDS), default="val",
+                   help="test is read only for final numbers; keep the default for development")
     p.add_argument("--limit", type=int, default=0, help="use only the first N seeds of the split (0 = all)")
     p.add_argument("--rounds", type=int, default=1)
     args = p.parse_args()
+
+    if args.rounds != 1:
+        p.error("--rounds must be 1; per-match parsing assumes a single round, loop over seeds instead")
 
     seeds = list(ALL_SEEDS[args.split])
     if args.limit:
