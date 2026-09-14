@@ -10,7 +10,7 @@ from torch import optim
 
 import events as e
 
-from .callbacks import MODEL_FILE
+from .callbacks import MODEL_FILE, load_checkpoint
 from .model import ACTIONS, COIN_DIST_IDX, CRATE_DIST_IDX, IN_DANGER_IDX, STATE_SIZE, DuelingQNetwork, state_to_vector
 
 GAMMA = 0.95
@@ -65,14 +65,23 @@ def setup_training(self):
     self.target_model.load_state_dict(self.model.state_dict())
     self.target_model.eval()
 
-    self.replay = ReplayBuffer(REPLAY_CAPACITY)
+    self.replay = ReplayBuffer(REPLAY_CAPACITY)  # not persisted: refills after a resume
     self.n_step_buffer = deque(maxlen=N_STEP)
     self.train_rng = np.random.default_rng()
-
-    self.total_steps = 0
-    self.training_round = 0
-    self.epsilon = EPSILON_START
     self.last_state_vec = None
+
+    checkpoint = load_checkpoint()
+    if checkpoint is not None and "optimizer_state" in checkpoint:
+        self.optimizer.load_state_dict(checkpoint["optimizer_state"])
+        self.total_steps = checkpoint["total_steps"]
+        self.training_round = checkpoint["training_round"]
+        self.logger.info(
+            "Resuming training at step=%d round=%d", self.total_steps, self.training_round,
+        )
+    else:
+        self.total_steps = 0
+        self.training_round = 0
+    self.epsilon = _epsilon_for_step(self.total_steps)
 
 
 def _potential_from_vector(vec):
@@ -190,6 +199,12 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: list):
 
 
 def save_model(self):
+    checkpoint = {
+        "model_state": self.model.state_dict(),
+        "optimizer_state": self.optimizer.state_dict(),
+        "total_steps": self.total_steps,
+        "training_round": self.training_round,
+    }
     temporary_file = Path(str(MODEL_FILE) + ".tmp")
-    torch.save(self.model.state_dict(), temporary_file)
+    torch.save(checkpoint, temporary_file)
     temporary_file.replace(MODEL_FILE)
