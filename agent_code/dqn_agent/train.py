@@ -1,0 +1,195 @@
+"""Double-DQN training: n-step replay buffer, target network, reward shaping."""
+
+from collections import deque
+from pathlib import Path
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+from torch import optim
+
+import events as e
+
+from .callbacks import MODEL_FILE
+from .model import ACTIONS, COIN_DIST_IDX, CRATE_DIST_IDX, IN_DANGER_IDX, STATE_SIZE, DuelingQNetwork, state_to_vector
+
+GAMMA = 0.95
+N_STEP = 3
+LEARNING_RATE = 1e-4
+BATCH_SIZE = 128
+REPLAY_CAPACITY = 100_000
+MIN_REPLAY_BEFORE_TRAINING = 1_000
+TRAIN_EVERY_STEPS = 4
+TARGET_SYNC_EVERY_STEPS = 2_000
+GRAD_CLIP_NORM = 10.0
+
+EPSILON_START = 1.0
+EPSILON_END = 0.05
+EPSILON_DECAY_STEPS = 150_000
+
+SAVE_EVERY_ROUNDS = 25
+
+# Official-score events kept at (roughly) their real point values so shaping
+# stays a dense hint on top of the true objective, not a replacement for it.
+EVENT_REWARDS = {
+    e.COIN_COLLECTED: 1.0,
+    e.KILLED_OPPONENT: 5.0,
+    e.KILLED_SELF: -5.0,
+    e.GOT_KILLED: -5.0,
+    e.CRATE_DESTROYED: 0.2,
+    e.INVALID_ACTION: -0.5,
+    e.WAITED: -0.05,
+    e.SURVIVED_ROUND: 1.0,
+}
+STEP_REWARD = -0.01
+
+
+class ReplayBuffer:
+    def __init__(self, capacity):
+        self.buffer = deque(maxlen=capacity)
+
+    def push(self, transition):
+        self.buffer.append(transition)
+
+    def sample(self, batch_size, rng):
+        indices = rng.integers(0, len(self.buffer), size=batch_size)
+        return [self.buffer[i] for i in indices]
+
+    def __len__(self):
+        return len(self.buffer)
+
+
+def setup_training(self):
+    self.optimizer = optim.Adam(self.model.parameters(), lr=LEARNING_RATE)
+    self.target_model = DuelingQNetwork().to(self.device)
+    self.target_model.load_state_dict(self.model.state_dict())
+    self.target_model.eval()
+
+    self.replay = ReplayBuffer(REPLAY_CAPACITY)
+    self.n_step_buffer = deque(maxlen=N_STEP)
+    self.train_rng = np.random.default_rng()
+
+    self.total_steps = 0
+    self.training_round = 0
+    self.epsilon = EPSILON_START
+    self.last_state_vec = None
+
+
+def _potential_from_vector(vec):
+    """Potential Phi(s), built from features already computed for this step
+    (never recomputed from game_state). Combines negative safe-path distance
+    to the nearer of {coin, useful crate} with a penalty for currently
+    standing in a known blast window.
+
+    Potential-based (Ng, Harada & Russell 1999): reward = STEP_REWARD +
+    events + gamma*Phi(s') - Phi(s) leaves the optimal policy unchanged while
+    densifying the otherwise sparse official-score reward.
+    """
+    goal_term = -min(vec[COIN_DIST_IDX], vec[CRATE_DIST_IDX])
+    danger_term = -2.0 if vec[IN_DANGER_IDX] > 0 else 0.0
+    return float(goal_term + danger_term)
+
+
+def _shaped_reward(old_vec, new_vec, events):
+    reward = STEP_REWARD + sum(EVENT_REWARDS.get(ev, 0.0) for ev in events)
+    new_potential = 0.0 if new_vec is None else _potential_from_vector(new_vec)
+    reward += GAMMA * new_potential - _potential_from_vector(old_vec)
+    return reward
+
+
+def _epsilon_for_step(step):
+    if step >= EPSILON_DECAY_STEPS:
+        return EPSILON_END
+    frac = step / EPSILON_DECAY_STEPS
+    return EPSILON_START + frac * (EPSILON_END - EPSILON_START)
+
+
+def _emit_n_step(self, k):
+    """Pop the n_step_buffer's oldest entry, replaced by its k-step return
+    and a bootstrap target k steps later (or, if that later entry is
+    terminal, no bootstrap at all)."""
+    state0, action0, _, _, _ = self.n_step_buffer[0]
+    discounted_reward = sum((GAMMA ** i) * self.n_step_buffer[i][2] for i in range(k))
+    _, _, _, state_k, done_k = self.n_step_buffer[k - 1]
+    self.replay.push((state0, ACTIONS.index(action0), discounted_reward, state_k, done_k, k))
+
+
+def _push_transition(self, state_vec, action, reward, next_state_vec, done):
+    self.n_step_buffer.append((state_vec, action, reward, next_state_vec, done))
+    if done:
+        # Episode over: drain every pending transition, each truncated to
+        # however many real steps remain until the terminal one.
+        while self.n_step_buffer:
+            _emit_n_step(self, len(self.n_step_buffer))
+            self.n_step_buffer.popleft()
+    elif len(self.n_step_buffer) == N_STEP:
+        _emit_n_step(self, N_STEP)
+        self.n_step_buffer.popleft()
+
+
+def _optimize(self):
+    batch = self.replay.sample(BATCH_SIZE, self.train_rng)
+    states = torch.from_numpy(np.stack([b[0] for b in batch]))
+    actions = torch.tensor([b[1] for b in batch], dtype=torch.long)
+    rewards = torch.tensor([b[2] for b in batch], dtype=torch.float32)
+    next_states = torch.from_numpy(np.stack([b[3] for b in batch]))
+    dones = torch.tensor([b[4] for b in batch], dtype=torch.float32)
+    steps = torch.tensor([b[5] for b in batch], dtype=torch.float32)
+
+    q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+
+    with torch.no_grad():
+        # Double DQN: the online network picks the next action, the target
+        # network evaluates it -- decouples selection from evaluation to cut
+        # the overestimation bias plain DQN has under sparse/spiky rewards.
+        next_actions = self.model(next_states).argmax(dim=1, keepdim=True)
+        next_q = self.target_model(next_states).gather(1, next_actions).squeeze(1)
+        targets = rewards + (GAMMA ** steps) * (1.0 - dones) * next_q
+
+    loss = F.smooth_l1_loss(q_values, targets)
+    self.optimizer.zero_grad()
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(self.model.parameters(), GRAD_CLIP_NORM)
+    self.optimizer.step()
+    self.logger.debug("train step=%d loss=%.4f replay=%d", self.total_steps, loss.item(), len(self.replay))
+
+
+def _maybe_train(self):
+    if len(self.replay) < MIN_REPLAY_BEFORE_TRAINING:
+        return
+    if self.total_steps % TRAIN_EVERY_STEPS != 0:
+        return
+    _optimize(self)
+    if self.total_steps % TARGET_SYNC_EVERY_STEPS == 0:
+        self.target_model.load_state_dict(self.model.state_dict())
+
+
+def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_state: dict, events: list):
+    new_vec = state_to_vector(new_game_state, self.recent_positions)
+    reward = _shaped_reward(self.last_state_vec, new_vec, events)
+    _push_transition(self, self.last_state_vec, self_action, reward, new_vec, done=False)
+
+    self.total_steps += 1
+    self.epsilon = _epsilon_for_step(self.total_steps)
+    _maybe_train(self)
+
+
+def end_of_round(self, last_game_state: dict, last_action: str, events: list):
+    reward = _shaped_reward(self.last_state_vec, None, events)
+    terminal_vec = np.zeros(STATE_SIZE, dtype=np.float32)  # unused when done=True; never bootstrapped
+    _push_transition(self, self.last_state_vec, last_action, reward, terminal_vec, done=True)
+    _maybe_train(self)
+
+    self.training_round += 1
+    self.logger.info(
+        "round=%d steps=%d epsilon=%.3f replay=%d",
+        self.training_round, self.total_steps, self.epsilon, len(self.replay),
+    )
+    if self.training_round % SAVE_EVERY_ROUNDS == 0:
+        save_model(self)
+
+
+def save_model(self):
+    temporary_file = Path(str(MODEL_FILE) + ".tmp")
+    torch.save(self.model.state_dict(), temporary_file)
+    temporary_file.replace(MODEL_FILE)
