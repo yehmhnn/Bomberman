@@ -103,3 +103,16 @@ base_4rule,coin-heaven,rule_based_agent,100,win,0.225,0.210,0.237
 base_4rule,coin-heaven,rule_based_agent,100,survived,0.468,0.427,0.512
 base_4rule,coin-heaven,rule_based_agent,100,time,0.916,0.816,1.018
 base_4rule,coin-heaven,rule_based_agent,100,think_time_mean,0.003,0.003,0.003
+dev_4dqn_coinheaven,coin-heaven,dqn_agent,20,score,6.638,4.975,8.312
+dev_4dqn_coinheaven,coin-heaven,dqn_agent,20,coins,6.575,4.937,8.250
+dev_4dqn_coinheaven,coin-heaven,dqn_agent,20,kills,0.013,0.000,0.037
+dev_4dqn_coinheaven,coin-heaven,dqn_agent,20,suicides,0.475,0.412,0.537
+dev_4dqn_coinheaven,coin-heaven,dqn_agent,20,suicide,0.475,0.412,0.537
+dev_4dqn_coinheaven,coin-heaven,dqn_agent,20,crates,0.000,0.000,0.000
+dev_4dqn_coinheaven,coin-heaven,dqn_agent,20,invalid,0.062,0.013,0.113
+dev_4dqn_coinheaven,coin-heaven,dqn_agent,20,alive_steps,215.838,186.779,242.764
+dev_4dqn_coinheaven,coin-heaven,dqn_agent,20,rank,2.500,2.500,2.500
+dev_4dqn_coinheaven,coin-heaven,dqn_agent,20,win,0.225,0.188,0.250
+dev_4dqn_coinheaven,coin-heaven,dqn_agent,20,survived,0.525,0.463,0.588
+dev_4dqn_coinheaven,coin-heaven,dqn_agent,20,time,0.393,0.333,0.453
+dev_4dqn_coinheaven,coin-heaven,dqn_agent,20,think_time_mean,0.002,0.002,0.002
