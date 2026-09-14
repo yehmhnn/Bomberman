@@ -33,7 +33,11 @@ def track_position(recent_positions, pos):
     return recent_positions
 
 
-def _bfs_target(game_state, occupied, goals, danger=None):
+def bfs_target(game_state, occupied, goals, danger=None):
+    """Shortest-path first-step direction + distance to the nearest tile in
+    goals. Shared by coin/crate targeting here and opponent targeting in
+    shared/opponents.py — kept public so it isn't duplicated a third time.
+    """
     start = game_state["self"][3]
     if not goals:
         return None, None
@@ -75,12 +79,12 @@ def _crate_adjacent_tiles(field):
 
 def nearest_coin(game_state, occupied=None, danger=None):
     occupied = _occupied(game_state) if occupied is None else occupied
-    return _bfs_target(game_state, occupied, set(game_state["coins"]), danger)
+    return bfs_target(game_state, occupied, set(game_state["coins"]), danger)
 
 
 def nearest_crate(game_state, occupied=None, danger=None):
     occupied = _occupied(game_state) if occupied is None else occupied
-    return _bfs_target(game_state, occupied, _crate_adjacent_tiles(game_state["field"]), danger)
+    return bfs_target(game_state, occupied, _crate_adjacent_tiles(game_state["field"]), danger)
 
 
 def bomb_hits_crate(game_state, pos):
