@@ -1,0 +1,104 @@
+import sys
+from pathlib import Path
+
+import numpy as np
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+
+from agent_code.dqn_agent.model import action_mask_vector, shield_mask  # noqa: E402
+from shared.safety import safe_action_mask  # noqa: E402
+
+WALL = -1
+ACTIONS = ("UP", "RIGHT", "DOWN", "LEFT", "WAIT", "BOMB")
+
+
+def bordered_field(size=17):
+    # A real board always has a wall border; danger/escape BFS relies on it
+    # to terminate instead of walking off the array (see tests/test_opponents.py).
+    field = np.zeros((size, size), dtype=int)
+    field[:1, :] = WALL
+    field[-1:, :] = WALL
+    field[:, :1] = WALL
+    field[:, -1:] = WALL
+    return field
+
+
+def make_state(field, pos, bombs=(), others=(), bombs_left=True, explosion_map=None):
+    return {
+        "field": field,
+        "self": ("me", 0, bombs_left, pos),
+        "others": list(others),
+        "bombs": list(bombs),
+        "coins": [],
+        "explosion_map": explosion_map if explosion_map is not None else np.zeros_like(field),
+    }
+
+
+def test_open_space_no_danger_everything_allowed():
+    state = make_state(bordered_field(), (8, 8))
+    mask = shield_mask(state)
+    assert all(mask[a] for a in ACTIONS)
+
+
+def test_bomb_rejected_in_a_dead_end_pocket_even_though_immediately_safe():
+    # (7, 8) is a one-tile dead-end reachable only via (8, 8); stepping into
+    # it or waiting is fine (nothing is dangerous yet), but placing a bomb
+    # at (8, 8) leaves nowhere to run once its blast covers the only exit --
+    # exactly the gap shared.safety.safe_action_mask's step-0-only check
+    # misses, since escape "exists" at step 0 but not for the full horizon.
+    field = bordered_field()
+    for wx, wy in [(7, 7), (7, 9), (6, 8), (9, 8), (8, 7), (8, 9)]:
+        field[wx, wy] = WALL
+    state = make_state(field, (8, 8))
+
+    mask = shield_mask(state)
+    assert mask["BOMB"] is False
+    assert mask["LEFT"] is True  # stepping into the dead end itself is still fine
+    assert mask["WAIT"] is True
+
+
+def test_shield_is_a_subset_of_the_weaker_shared_mask():
+    field = bordered_field()
+    for wx, wy in [(7, 7), (7, 9), (6, 8), (9, 8), (8, 7), (8, 9)]:
+        field[wx, wy] = WALL
+    state = make_state(field, (8, 8))
+
+    strong = shield_mask(state)
+    weak = safe_action_mask(state)
+    for action in ACTIONS:
+        assert (not strong[action]) or weak[action], (
+            f"shield allowed {action} but the weaker immediate-safety mask did not"
+        )
+
+
+def test_action_mask_vector_degrades_to_weak_mask_when_shield_finds_nothing():
+    # A sealed 2-cell pocket: (7, 8)-(8, 8), walled top/bottom/left, with a
+    # bomb sitting at (9, 8) blocking the only far exit. Countdown 3 means
+    # neither cell is dangerous *yet* (weak/immediate mask sees WAIT and
+    # moving to (8, 8) as fine right now), but nothing in this 2-cell pocket
+    # escapes before the blast covers both cells at step 3 -- exactly the
+    # gap the full-horizon shield exists to catch, correctly finding no
+    # action survives it.
+    field = bordered_field()
+    for wx, wy in [(7, 7), (7, 9), (8, 7), (8, 9), (6, 8)]:
+        field[wx, wy] = WALL
+    state = make_state(field, (7, 8), bombs=[((9, 8), 3)])
+
+    weak_from_shared = safe_action_mask(state)
+    assert weak_from_shared["WAIT"] is True  # confirms this is the "looks fine now" case, not just blocked
+    assert weak_from_shared["RIGHT"] is True
+
+    strong = shield_mask(state)
+    assert not any(strong.values())
+
+    vector = action_mask_vector(state)
+    assert vector.dtype == bool
+    assert len(vector) == len(ACTIONS)
+    assert bool(vector[ACTIONS.index("WAIT")]) is True  # degraded to the weak mask, not left all-False
+
+
+def test_action_mask_vector_matches_shield_when_shield_is_non_empty():
+    state = make_state(bordered_field(), (8, 8))
+    vector = action_mask_vector(state)
+    assert list(vector) == [True] * len(ACTIONS)

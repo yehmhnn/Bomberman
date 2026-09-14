@@ -11,7 +11,18 @@ from torch import optim
 import events as e
 
 from .callbacks import MODEL_FILE, load_checkpoint
-from .model import ACTIONS, COIN_DIST_IDX, CRATE_DIST_IDX, IN_DANGER_IDX, STATE_SIZE, DuelingQNetwork, state_to_vector
+from .model import (
+    ACTIONS,
+    BOMB_HITS_OPPONENT_IDX,
+    COIN_DIST_IDX,
+    CRATE_DIST_IDX,
+    IN_DANGER_IDX,
+    OPPONENT_TRAPPED_IDX,
+    STATE_SIZE,
+    DuelingQNetwork,
+    state_to_vector,
+)
+from .replay import PrioritizedReplayBuffer
 
 GAMMA = 0.95
 N_STEP = 3
@@ -43,20 +54,14 @@ EVENT_REWARDS = {
 }
 STEP_REWARD = -0.01
 
-
-class ReplayBuffer:
-    def __init__(self, capacity):
-        self.buffer = deque(maxlen=capacity)
-
-    def push(self, transition):
-        self.buffer.append(transition)
-
-    def sample(self, batch_size, rng):
-        indices = rng.integers(0, len(self.buffer), size=batch_size)
-        return [self.buffer[i] for i in indices]
-
-    def __len__(self):
-        return len(self.buffer)
+# Reward for choosing BOMB when the feature vector already shows it would hit
+# (or fully trap) the nearest opponent -- both indices are read from the
+# state *before* the action, and BOMB is only ever selectable when the
+# shield's escape check passed, so this rewards a safe kill opportunity, not
+# recklessness. Trapping (near-certain kill) is worth more than merely being
+# in blast range (the opponent can still walk out before it detonates).
+SNIPER_HIT_BONUS = 1.5
+SNIPER_TRAP_BONUS = 3.0
 
 
 def setup_training(self):
@@ -65,7 +70,7 @@ def setup_training(self):
     self.target_model.load_state_dict(self.model.state_dict())
     self.target_model.eval()
 
-    self.replay = ReplayBuffer(REPLAY_CAPACITY)  # not persisted: refills after a resume
+    self.replay = PrioritizedReplayBuffer(REPLAY_CAPACITY)  # not persisted: refills after a resume
     self.n_step_buffer = deque(maxlen=N_STEP)
     self.train_rng = np.random.default_rng()
     self.last_state_vec = None
@@ -99,8 +104,20 @@ def _potential_from_vector(vec):
     return float(goal_term + danger_term)
 
 
-def _shaped_reward(old_vec, new_vec, events):
+def _sniper_bonus(old_vec, action):
+    if action != "BOMB":
+        return 0.0
+    bonus = 0.0
+    if old_vec[BOMB_HITS_OPPONENT_IDX] > 0:
+        bonus += SNIPER_HIT_BONUS
+    if old_vec[OPPONENT_TRAPPED_IDX] > 0:
+        bonus += SNIPER_TRAP_BONUS
+    return bonus
+
+
+def _shaped_reward(old_vec, new_vec, events, action):
     reward = STEP_REWARD + sum(EVENT_REWARDS.get(ev, 0.0) for ev in events)
+    reward += _sniper_bonus(old_vec, action)
     new_potential = 0.0 if new_vec is None else _potential_from_vector(new_vec)
     reward += GAMMA * new_potential - _potential_from_vector(old_vec)
     return reward
@@ -137,13 +154,14 @@ def _push_transition(self, state_vec, action, reward, next_state_vec, done):
 
 
 def _optimize(self):
-    batch = self.replay.sample(BATCH_SIZE, self.train_rng)
+    batch, indices, is_weights = self.replay.sample(BATCH_SIZE, self.train_rng, self.total_steps)
     states = torch.from_numpy(np.stack([b[0] for b in batch]))
     actions = torch.tensor([b[1] for b in batch], dtype=torch.long)
     rewards = torch.tensor([b[2] for b in batch], dtype=torch.float32)
     next_states = torch.from_numpy(np.stack([b[3] for b in batch]))
     dones = torch.tensor([b[4] for b in batch], dtype=torch.float32)
     steps = torch.tensor([b[5] for b in batch], dtype=torch.float32)
+    weights = torch.from_numpy(is_weights)
 
     q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)
 
@@ -155,7 +173,14 @@ def _optimize(self):
         next_q = self.target_model(next_states).gather(1, next_actions).squeeze(1)
         targets = rewards + (GAMMA ** steps) * (1.0 - dones) * next_q
 
-    loss = F.smooth_l1_loss(q_values, targets)
+    # Priorities are updated from the raw TD error (pre-Huber-transform);
+    # the training loss itself still uses Huber, weighted by the prioritized
+    # -sampling importance-correction so we're not just relearning what
+    # prioritized sampling over-selected.
+    self.replay.update_priorities(indices, (q_values.detach() - targets).numpy())
+    elementwise_loss = F.smooth_l1_loss(q_values, targets, reduction="none")
+    loss = (elementwise_loss * weights).mean()
+
     self.optimizer.zero_grad()
     loss.backward()
     torch.nn.utils.clip_grad_norm_(self.model.parameters(), GRAD_CLIP_NORM)
@@ -175,7 +200,7 @@ def _maybe_train(self):
 
 def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_state: dict, events: list):
     new_vec = state_to_vector(new_game_state, self.recent_positions)
-    reward = _shaped_reward(self.last_state_vec, new_vec, events)
+    reward = _shaped_reward(self.last_state_vec, new_vec, events, self_action)
     _push_transition(self, self.last_state_vec, self_action, reward, new_vec, done=False)
 
     self.total_steps += 1
@@ -184,7 +209,7 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
 
 
 def end_of_round(self, last_game_state: dict, last_action: str, events: list):
-    reward = _shaped_reward(self.last_state_vec, None, events)
+    reward = _shaped_reward(self.last_state_vec, None, events, last_action)
     terminal_vec = np.zeros(STATE_SIZE, dtype=np.float32)  # unused when done=True; never bootstrapped
     _push_transition(self, self.last_state_vec, last_action, reward, terminal_vec, done=True)
     _maybe_train(self)
