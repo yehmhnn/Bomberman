@@ -11,11 +11,13 @@ import numpy as np
 import torch
 from torch import nn
 
+from settings import BOMB_POWER
+from shared.danger import danger_map
 from shared.features import RECENT_POSITIONS_MAXLEN, build_feature_vector
 from shared.features import FEATURE_SIZE as SCALAR_FEATURE_SIZE
 from shared.opponents import FEATURE_SIZE as OPPONENT_FEATURE_SIZE
 from shared.opponents import opponent_features
-from shared.safety import safe_action_mask
+from shared.safety import MOVE, _can_escape_own_bomb, _occupied, escape_exists, safe_action_mask, tile_free
 
 ACTIONS = ("UP", "RIGHT", "DOWN", "LEFT", "WAIT", "BOMB")
 STATE_SIZE = SCALAR_FEATURE_SIZE + OPPONENT_FEATURE_SIZE  # 24 + 10 = 34
@@ -26,6 +28,8 @@ STATE_SIZE = SCALAR_FEATURE_SIZE + OPPONENT_FEATURE_SIZE  # 24 + 10 = 34
 COIN_DIST_IDX = 20
 CRATE_DIST_IDX = 21
 IN_DANGER_IDX = 22
+BOMB_HITS_OPPONENT_IDX = SCALAR_FEATURE_SIZE + 5   # shared/opponents.py index 5
+OPPONENT_TRAPPED_IDX = SCALAR_FEATURE_SIZE + 6     # shared/opponents.py index 6
 
 
 def new_recent_positions():
@@ -40,11 +44,52 @@ def state_to_vector(game_state, recent_positions=None):
     return np.asarray(vector, dtype=np.float32)
 
 
-def action_mask_vector(game_state):
-    """Boolean array over ACTIONS from the shared safety mask (physically
-    legal AND not immediately lethal per shared.safety.safe_action_mask).
+def shield_mask(game_state):
+    """A genuine multi-step safety shield.
+
+    shared.safety.safe_action_mask only checks whether the destination tile
+    is dangerous *this instant* (relative step 0). That lets an agent take a
+    sequence of individually-"safe-right-now" moves into a dead end that
+    becomes lethal a few steps later -- exactly the failure mode behind a
+    high self-kill rate. This additionally requires that an escape route
+    still exists *after* taking the action, using the same danger map and
+    BFS reachability check shared.safety already uses for the BOMB action,
+    generalized to every action. Strictly stronger (a subset of) safe_
+    action_mask's True set, so it can legitimately mask everything out in a
+    genuinely hopeless spot -- action_mask_vector below degrades gracefully
+    when that happens instead of returning an all-False mask.
     """
-    mask = safe_action_mask(game_state)
+    x, y = game_state["self"][3]
+    occupied = _occupied(game_state)
+    danger = danger_map(game_state)
+    here_safe = 0 not in danger.get((x, y), ())
+
+    mask = {}
+    for action, (dx, dy) in MOVE.items():
+        target = (x + dx, y + dy)
+        mask[action] = (
+            tile_free(game_state, target, occupied)
+            and 0 not in danger.get(target, ())
+            and escape_exists(game_state, danger, start=target)
+        )
+    mask["WAIT"] = here_safe and escape_exists(game_state, danger, start=(x, y))
+    mask["BOMB"] = (
+        bool(game_state["self"][2])
+        and here_safe
+        and _can_escape_own_bomb(game_state, (x, y), BOMB_POWER)
+    )
+    return mask
+
+
+def action_mask_vector(game_state):
+    """Boolean array over ACTIONS: the strong shield above, degrading to the
+    shared (weaker, immediate-safety-only) mask when the shield finds no
+    action survives full lookahead -- a genuinely hopeless spot should still
+    prefer "safe for now" over an arbitrary choice.
+    """
+    mask = shield_mask(game_state)
+    if not any(mask.values()):
+        mask = safe_action_mask(game_state)
     return np.array([mask[a] for a in ACTIONS], dtype=bool)
 
 
