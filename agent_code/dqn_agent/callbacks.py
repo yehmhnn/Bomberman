@@ -12,13 +12,28 @@ from .model import DuelingQNetwork, action_mask_vector, new_recent_positions, se
 MODEL_FILE = Path(__file__).with_name("model.pt")
 
 
+def load_checkpoint():
+    """Returns the checkpoint dict (model_state, optimizer_state, total_steps,
+    training_round) if MODEL_FILE exists, else None. A single dict format
+    shared by callbacks.py (reads model_state) and train.py (reads the rest),
+    so training state survives across separate process runs -- resuming a
+    Kaggle session or moving from coin-heaven to classic doesn't silently
+    reset epsilon back to 1.0 and lose optimizer momentum.
+    """
+    return torch.load(MODEL_FILE, map_location="cpu") if MODEL_FILE.is_file() else None
+
+
 def setup(self):
     torch.set_num_threads(1)  # the tournament guarantees exactly one CPU thread
     self.device = torch.device("cpu")
     self.model = DuelingQNetwork().to(self.device)
-    if MODEL_FILE.is_file():
-        self.model.load_state_dict(torch.load(MODEL_FILE, map_location=self.device))
-        self.logger.info("Loaded trained weights from %s", MODEL_FILE)
+    checkpoint = load_checkpoint()
+    if checkpoint is not None:
+        self.model.load_state_dict(checkpoint["model_state"])
+        self.logger.info(
+            "Loaded trained weights from %s (total_steps=%d)",
+            MODEL_FILE, checkpoint.get("total_steps", 0),
+        )
     else:
         self.logger.info("No saved model found at %s, starting from random weights", MODEL_FILE)
     self.model.eval()
