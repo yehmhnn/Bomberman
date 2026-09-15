@@ -68,7 +68,15 @@ def escape_exists(game_state, danger, start=None):
         for npos in [pos] + [(pos[0] + dx, pos[1] + dy) for dx, dy in MOVE.values()]:
             if npos != pos and not tile_free(game_state, npos, occupied):
                 continue
-            if step in danger.get(npos, ()):
+            # start (relative-step 0) is already verified safe by the caller
+            # (e.g. safe_action_mask's `here_safe`/`0 not in danger.get(target)`
+            # checks); this expansion computes the state at relative-step
+            # step+1, so that -- not the current step -- is what must be
+            # checked against danger. Checking `step` here under-counts by
+            # one and can approve a move sequence that is one step too slow
+            # to clear a bomb's blast (e.g. WAIT once then flee, when only
+            # fleeing immediately actually escapes in time).
+            if (step + 1) in danger.get(npos, ()):
                 continue
             state = (npos, step + 1)
             if state not in seen:

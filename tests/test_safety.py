@@ -80,6 +80,36 @@ def test_escape_exists_in_open_space():
     assert escape_exists(state, danger) is True
 
 
+def test_escape_needs_the_full_countdown_not_one_step_less():
+    # Regression test for an off-by-one that let escape_exists approve a
+    # move sequence one step too slow to actually clear the blast. A power-3
+    # bomb takes exactly 4 real moves to outrun in a straight corridor with
+    # no diagonal shortcut (walled top/bottom so escape must run along one
+    # axis, matching a crate-lined corridor in the real game). A fresh
+    # bomb-drop (countdown 4, the convention shared.safety._can_escape_own_bomb
+    # uses) leaves exactly enough time; the SAME bomb one real step later
+    # (countdown 3, as agents observe it on their very next decision) must
+    # NOT show an escape, because by then only 3 moves remain and distance 3
+    # is still inside a power-3 blast. Before the fix, escape_exists returned
+    # True for both, because it checked a candidate tile against the current
+    # step counter instead of the step that tile would actually be occupied
+    # at -- silently endorsing a fatal "wait, then flee" or "one step too
+    # slow" sequence.
+    field = open_field()
+    for x in range(3, 11):
+        field[x, 5] = WALL
+        field[x, 7] = WALL
+    state = make_state(field, (6, 6), bombs=[((6, 6), 4)])
+    danger = danger_map(state, bomb_power=3)
+    assert escape_exists(state, danger) is True, "a fresh bomb-drop leaves exactly enough time to flee"
+
+    state_one_step_later = make_state(field, (6, 6), bombs=[((6, 6), 3)])
+    danger_one_step_later = danger_map(state_one_step_later, bomb_power=3)
+    assert escape_exists(state_one_step_later, danger_one_step_later) is False, (
+        "one real step later, only 3 moves remain -- not enough to clear a power-3 blast"
+    )
+
+
 def test_no_escape_in_a_short_dead_end():
     field = open_field()
     for wx, wy in [(5, 4), (5, 6), (4, 5), (6, 4), (6, 6), (7, 5)]:
