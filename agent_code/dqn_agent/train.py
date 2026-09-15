@@ -39,6 +39,9 @@ EPSILON_END = 0.05
 EPSILON_DECAY_STEPS = 150_000
 
 SAVE_EVERY_ROUNDS = 25
+SNAPSHOT_DIR = Path(__file__).with_name("snapshots")
+SNAPSHOT_EVERY_ROUNDS = 1000
+MAX_SNAPSHOTS = 15  # small checkpoints (~0.5MB each); caps disk use, not a meaningful memory concern
 
 # Official-score events kept at (roughly) their real point values so shaping
 # stays a dense hint on top of the true objective, not a replacement for it.
@@ -222,6 +225,8 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: list):
     )
     if self.training_round % SAVE_EVERY_ROUNDS == 0:
         save_model(self)
+    if self.training_round % SNAPSHOT_EVERY_ROUNDS == 0:
+        save_snapshot(self)
 
 
 def save_model(self):
@@ -234,3 +239,19 @@ def save_model(self):
     temporary_file = Path(str(MODEL_FILE) + ".tmp")
     torch.save(checkpoint, temporary_file)
     temporary_file.replace(MODEL_FILE)
+
+
+def save_snapshot(self):
+    """Add the current weights to the self-play opponent pool (plain weights
+    only -- dqn_selfplay_opponent never trains, so it needs no optimizer
+    state). Fictitious self-play: sampling a diverse pool of past selves
+    trains more robust play than a fixed set of always-identical opponents,
+    and avoids the cyclic/overfit behavior pure single-opponent self-play is
+    prone to (Heinrich & Silver, 2016; see also AlphaStar-style league
+    training). Capped at MAX_SNAPSHOTS, oldest evicted first.
+    """
+    SNAPSHOT_DIR.mkdir(exist_ok=True)
+    torch.save(self.model.state_dict(), SNAPSHOT_DIR / f"snapshot_round{self.training_round}.pt")
+    snapshots = sorted(SNAPSHOT_DIR.glob("snapshot_round*.pt"), key=lambda p: p.stat().st_mtime)
+    for stale in snapshots[:-MAX_SNAPSHOTS]:
+        stale.unlink()
