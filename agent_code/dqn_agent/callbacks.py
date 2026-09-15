@@ -57,5 +57,11 @@ def act(self, game_state: dict) -> str:
         # the same BFS/danger-map features a second time.
         self.last_state_vec = state_vec
 
-    self.logger.debug("q=%s mask=%s epsilon=%.3f -> %s", q_values, mask, self.epsilon, action)
+    # Per-step DEBUG logging at training scale (millions of steps) grows the
+    # log file unbounded -- agents.py's FileHandler has no rotation/cap, and
+    # a 400MB+ log file previously appears to have brought a training run
+    # down. Throttle to keep some visibility without the unbounded growth;
+    # evaluation runs (self.train=False) are short, so log every step there.
+    if not self.train or self.total_steps % 500 == 0:
+        self.logger.debug("step=%s q=%s mask=%s epsilon=%.3f -> %s", getattr(self, "total_steps", "-"), q_values, mask, self.epsilon, action)
     return action

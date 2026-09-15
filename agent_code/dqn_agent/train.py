@@ -185,7 +185,8 @@ def _optimize(self):
     loss.backward()
     torch.nn.utils.clip_grad_norm_(self.model.parameters(), GRAD_CLIP_NORM)
     self.optimizer.step()
-    self.logger.debug("train step=%d loss=%.4f replay=%d", self.total_steps, loss.item(), len(self.replay))
+    if self.total_steps % 500 == 0:  # see callbacks.act's comment: unbounded per-step logging is what broke a run
+        self.logger.debug("train step=%d loss=%.4f replay=%d", self.total_steps, loss.item(), len(self.replay))
 
 
 def _maybe_train(self):
