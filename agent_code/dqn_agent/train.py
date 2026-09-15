@@ -23,6 +23,7 @@ from .model import (
     state_to_vector,
 )
 from .replay import PrioritizedReplayBuffer
+from .symmetry import augment_transition
 
 GAMMA = 0.95
 N_STEP = 3
@@ -136,11 +137,14 @@ def _epsilon_for_step(step):
 def _emit_n_step(self, k):
     """Pop the n_step_buffer's oldest entry, replaced by its k-step return
     and a bootstrap target k steps later (or, if that later entry is
-    terminal, no bootstrap at all)."""
+    terminal, no bootstrap at all). Pushes all 8 dihedral-symmetric variants
+    (see symmetry.py) rather than just the one actually played -- the board
+    has 8-fold symmetry the network otherwise has no way to know about."""
     state0, action0, _, _, _ = self.n_step_buffer[0]
     discounted_reward = sum((GAMMA ** i) * self.n_step_buffer[i][2] for i in range(k))
     _, _, _, state_k, done_k = self.n_step_buffer[k - 1]
-    self.replay.push((state0, ACTIONS.index(action0), discounted_reward, state_k, done_k, k))
+    for sym_state0, sym_action0, sym_state_k in augment_transition(state0, action0, state_k):
+        self.replay.push((sym_state0, ACTIONS.index(sym_action0), discounted_reward, sym_state_k, done_k, k))
 
 
 def _push_transition(self, state_vec, action, reward, next_state_vec, done):
