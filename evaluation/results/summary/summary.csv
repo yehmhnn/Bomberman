@@ -116,3 +116,16 @@ dev_4dqn_coinheaven,coin-heaven,dqn_agent,20,win,0.225,0.188,0.250
 dev_4dqn_coinheaven,coin-heaven,dqn_agent,20,survived,0.525,0.463,0.588
 dev_4dqn_coinheaven,coin-heaven,dqn_agent,20,time,0.393,0.333,0.453
 dev_4dqn_coinheaven,coin-heaven,dqn_agent,20,think_time_mean,0.002,0.002,0.002
+stage2_fixed_solo_classic,classic,dqn_agent,30,score,8.833,8.600,9.000
+stage2_fixed_solo_classic,classic,dqn_agent,30,coins,8.833,8.600,9.000
+stage2_fixed_solo_classic,classic,dqn_agent,30,kills,0.000,0.000,0.000
+stage2_fixed_solo_classic,classic,dqn_agent,30,suicides,0.000,0.000,0.000
+stage2_fixed_solo_classic,classic,dqn_agent,30,suicide,0.000,0.000,0.000
+stage2_fixed_solo_classic,classic,dqn_agent,30,crates,119.067,115.933,121.633
+stage2_fixed_solo_classic,classic,dqn_agent,30,invalid,0.000,0.000,0.000
+stage2_fixed_solo_classic,classic,dqn_agent,30,alive_steps,384.567,378.567,390.533
+stage2_fixed_solo_classic,classic,dqn_agent,30,rank,1.000,1.000,1.000
+stage2_fixed_solo_classic,classic,dqn_agent,30,win,1.000,1.000,1.000
+stage2_fixed_solo_classic,classic,dqn_agent,30,survived,1.000,1.000,1.000
+stage2_fixed_solo_classic,classic,dqn_agent,30,time,0.357,0.347,0.370
+stage2_fixed_solo_classic,classic,dqn_agent,30,think_time_mean,0.001,0.001,0.001
