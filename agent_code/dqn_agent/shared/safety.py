@@ -3,7 +3,7 @@
 from collections import deque
 
 from settings import BOMB_POWER, BOMB_TIMER
-from shared.danger import danger_map
+from .danger import danger_map
 
 MOVE = {"UP": (0, -1), "RIGHT": (1, 0), "DOWN": (0, 1), "LEFT": (-1, 0)}
 

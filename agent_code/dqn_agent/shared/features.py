@@ -3,8 +3,8 @@
 from collections import deque
 
 from settings import BOMB_POWER
-from shared.danger import blast_coords, danger_map
-from shared.safety import MOVE, _occupied, earliest_danger, safe_action_mask, tile_free
+from .danger import blast_coords, danger_map
+from .safety import MOVE, _occupied, earliest_danger, safe_action_mask, tile_free
 
 ACTIONS = ("UP", "RIGHT", "DOWN", "LEFT")
 FEATURE_SIZE = 24
