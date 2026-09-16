@@ -12,6 +12,8 @@ import torch
 from torch import nn
 
 from settings import BOMB_POWER, BOMB_TIMER
+
+from .noisy import NoisyLinear
 from .shared.danger import danger_map
 from .shared.features import RECENT_POSITIONS_MAXLEN, build_feature_vector
 from .shared.features import FEATURE_SIZE as SCALAR_FEATURE_SIZE
@@ -140,6 +142,14 @@ class DuelingQNetwork(nn.Module):
     training; q_values() collapses it to the familiar (batch, n_actions)
     mean for action selection, so act()/select_action's interface doesn't
     need to change.
+
+    The value/advantage heads are NoisyLinear (Fortunato et al., 2017) --
+    the last of the 6 Rainbow DQN components not already present here.
+    Layered on top of epsilon-greedy rather than replacing it (a smaller,
+    lower-risk change than removing epsilon-greedy entirely this late in
+    the project): noise gives state-dependent exploration on top of the
+    existing schedule, which matters most once epsilon has decayed near its
+    floor and epsilon-greedy alone barely explores anymore.
     """
 
     def __init__(self, state_size=STATE_SIZE, n_actions=len(ACTIONS), hidden=(256, 128), n_quantiles=N_QUANTILES):
@@ -151,8 +161,8 @@ class DuelingQNetwork(nn.Module):
             nn.Linear(state_size, h1), nn.ReLU(),
             nn.Linear(h1, h2), nn.ReLU(),
         )
-        self.value_head = nn.Linear(h2, n_quantiles)
-        self.advantage_head = nn.Linear(h2, n_actions * n_quantiles)
+        self.value_head = NoisyLinear(h2, n_quantiles)
+        self.advantage_head = NoisyLinear(h2, n_actions * n_quantiles)
         # tau_i = (i + 0.5) / N: the quantile fraction each output slot targets.
         self.register_buffer("tau", (torch.arange(n_quantiles, dtype=torch.float32) + 0.5) / n_quantiles)
 
@@ -164,6 +174,14 @@ class DuelingQNetwork(nn.Module):
 
     def q_values(self, x):
         return self.forward(x).mean(dim=-1)
+
+    def reset_noise(self):
+        self.value_head.reset_noise()
+        self.advantage_head.reset_noise()
+
+    def zero_noise(self):
+        self.value_head.zero_noise()
+        self.advantage_head.zero_noise()
 
 
 def select_action(q_values, mask, epsilon, rng):

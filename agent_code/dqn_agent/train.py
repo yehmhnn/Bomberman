@@ -174,6 +174,14 @@ def _quantile_huber_loss(predicted, target, tau, kappa=1.0):
 
 
 def _optimize(self):
+    # Fresh, independent noise for this gradient step -- resampling only in
+    # act() would mean every optimize() call trains on whatever noise the
+    # single most recent decision happened to leave behind, not a properly
+    # independent sample for the online network, and the target network
+    # would never get resampled at all.
+    self.model.reset_noise()
+    self.target_model.reset_noise()
+
     batch, indices, is_weights = self.replay.sample(BATCH_SIZE, self.train_rng, self.total_steps)
     states = torch.from_numpy(np.stack([b[0] for b in batch]))
     actions = torch.tensor([b[1] for b in batch], dtype=torch.long)

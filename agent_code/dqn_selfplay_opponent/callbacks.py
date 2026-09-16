@@ -55,6 +55,7 @@ def setup(self):
     else:
         self.logger.info("No snapshot or model found yet; opponent starts from random weights")
     self.model.eval()
+    self.model.zero_noise()  # deterministic: represents this past version's best strategy, not noisy exploration
 
     self.rng = np.random.default_rng()
     self.recent_positions = new_recent_positions()

@@ -37,6 +37,11 @@ def setup(self):
     else:
         self.logger.info("No saved model found at %s, starting from random weights", MODEL_FILE)
     self.model.eval()
+    if not self.train:
+        # Deterministic tournament policy: no noisy-net exploration, only
+        # epsilon=0 greedy over the learned mean quantiles. Training mode
+        # instead resamples fresh noise every decision (in act(), below).
+        self.model.zero_noise()
 
     self.rng = np.random.default_rng()
     self.recent_positions = new_recent_positions()
@@ -48,6 +53,8 @@ def act(self, game_state: dict) -> str:
     state_vec = state_to_vector(game_state, self.recent_positions)
     mask = action_mask_vector(game_state)
 
+    if self.train:
+        self.model.reset_noise()  # fresh noise per decision -- state-dependent exploration
     with torch.no_grad():
         q_values = self.model.q_values(torch.from_numpy(state_vec).unsqueeze(0)).squeeze(0).numpy()
 
