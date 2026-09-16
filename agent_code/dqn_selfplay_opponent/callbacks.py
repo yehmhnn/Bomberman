@@ -65,5 +65,5 @@ def act(self, game_state: dict) -> str:
     state_vec = state_to_vector(game_state, self.recent_positions)
     mask = action_mask_vector(game_state)
     with torch.no_grad():
-        q_values = self.model(torch.from_numpy(state_vec).unsqueeze(0)).squeeze(0).numpy()
+        q_values = self.model.q_values(torch.from_numpy(state_vec).unsqueeze(0)).squeeze(0).numpy()
     return select_action(q_values, mask, 0.0, self.rng)  # always greedy: its best learned strategy

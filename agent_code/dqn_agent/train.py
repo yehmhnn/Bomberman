@@ -5,7 +5,6 @@ from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn.functional as F
 from torch import optim
 
 import events as e
@@ -160,6 +159,20 @@ def _push_transition(self, state_vec, action, reward, next_state_vec, done):
         self.n_step_buffer.popleft()
 
 
+def _quantile_huber_loss(predicted, target, tau, kappa=1.0):
+    """Per-sample quantile regression loss (Dabney et al., 2018).
+
+    predicted, target: (batch, N) quantile estimates. tau: (N,) the quantile
+    fraction each *predicted* slot targets. Averaged over the N x N pairing
+    of predicted vs target quantiles; not reduced over the batch dimension
+    so callers can apply importance-sampling weights first.
+    """
+    u = target.unsqueeze(1) - predicted.unsqueeze(2)  # u[b, i, j] = target_j - predicted_i
+    huber = torch.where(u.abs() <= kappa, 0.5 * u.pow(2), kappa * (u.abs() - 0.5 * kappa))
+    quantile_weight = (tau.view(1, -1, 1) - (u.detach() < 0).float()).abs()
+    return (quantile_weight * huber).mean(dim=(1, 2))
+
+
 def _optimize(self):
     batch, indices, is_weights = self.replay.sample(BATCH_SIZE, self.train_rng, self.total_steps)
     states = torch.from_numpy(np.stack([b[0] for b in batch]))
@@ -169,23 +182,29 @@ def _optimize(self):
     dones = torch.tensor([b[4] for b in batch], dtype=torch.float32)
     steps = torch.tensor([b[5] for b in batch], dtype=torch.float32)
     weights = torch.from_numpy(is_weights)
+    n_quantiles = self.model.n_quantiles
 
-    q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+    quantiles = self.model(states)  # (batch, n_actions, N)
+    action_index = actions.view(-1, 1, 1).expand(-1, 1, n_quantiles)
+    predicted = quantiles.gather(1, action_index).squeeze(1)  # (batch, N)
 
     with torch.no_grad():
-        # Double DQN: the online network picks the next action, the target
-        # network evaluates it -- decouples selection from evaluation to cut
-        # the overestimation bias plain DQN has under sparse/spiky rewards.
-        next_actions = self.model(next_states).argmax(dim=1, keepdim=True)
-        next_q = self.target_model(next_states).gather(1, next_actions).squeeze(1)
-        targets = rewards + (GAMMA ** steps) * (1.0 - dones) * next_q
+        # Double DQN: the online network's mean Q-values pick the next
+        # action, the target network's full quantile distribution for that
+        # action supplies the target -- decouples selection from evaluation
+        # to cut the overestimation bias plain DQN has under sparse/spiky
+        # rewards, same as before, just applied to a distribution now.
+        next_actions = self.model.q_values(next_states).argmax(dim=1)
+        next_action_index = next_actions.view(-1, 1, 1).expand(-1, 1, n_quantiles)
+        next_quantiles = self.target_model(next_states).gather(1, next_action_index).squeeze(1)
+        targets = rewards.unsqueeze(1) + (GAMMA ** steps).unsqueeze(1) * (1.0 - dones).unsqueeze(1) * next_quantiles
 
-    # Priorities are updated from the raw TD error (pre-Huber-transform);
-    # the training loss itself still uses Huber, weighted by the prioritized
-    # -sampling importance-correction so we're not just relearning what
-    # prioritized sampling over-selected.
-    self.replay.update_priorities(indices, (q_values.detach() - targets).numpy())
-    elementwise_loss = F.smooth_l1_loss(q_values, targets, reduction="none")
+    # Priorities are updated from the raw TD error of the *means* (a scalar
+    # proxy consistent with the pre-distributional priority scheme); the
+    # training loss itself is the full quantile regression loss, weighted by
+    # the prioritized-sampling importance-correction.
+    self.replay.update_priorities(indices, (targets.mean(dim=1) - predicted.mean(dim=1)).detach().numpy())
+    elementwise_loss = _quantile_huber_loss(predicted, targets, self.model.tau)
     loss = (elementwise_loss * weights).mean()
 
     self.optimizer.zero_grad()

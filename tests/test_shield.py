@@ -102,3 +102,34 @@ def test_action_mask_vector_matches_shield_when_shield_is_non_empty():
     state = make_state(bordered_field(), (8, 8))
     vector = action_mask_vector(state)
     assert list(vector) == [True] * len(ACTIONS)
+
+
+def test_shield_anticipates_an_armed_adjacent_opponents_next_bomb():
+    # With BOMB_TIMER=4, a bomb dropped in the open gives plenty of time to
+    # flee even reacting after the fact -- anticipation only matters in a
+    # confined space, same insight as the dead-end-pocket tests above. Reuse
+    # that exact geometry: a 1-tile pocket at (7, 8) whose only exit, (8, 8),
+    # is occupied by an ARMED opponent instead of by our own bomb. No real
+    # bomb exists in game_state["bombs"] yet -- the opponent could drop one
+    # on their very next turn and there would be no way out of the pocket
+    # (its only exit tile is the opponent's own square). The reactive-only
+    # mask has no way to see this coming; the shield should.
+    field = bordered_field()
+    for wx, wy in [(7, 7), (7, 9), (6, 8), (9, 8), (8, 7), (8, 9)]:
+        field[wx, wy] = WALL
+    state = make_state(field, (7, 8), others=[("armed", 0, True, (8, 8))])
+
+    weak = safe_action_mask(state)
+    assert weak["WAIT"] is True, "sanity check: the reactive-only mask sees nothing wrong yet"
+
+    strong = shield_mask(state)
+    assert strong["WAIT"] is False, "the shield should see that the opponent could seal this pocket"
+
+
+def test_shield_does_not_restrict_movement_near_an_unarmed_opponent():
+    field = bordered_field()
+    for wx, wy in [(7, 7), (7, 9), (6, 8), (9, 8), (8, 7), (8, 9)]:
+        field[wx, wy] = WALL
+    state = make_state(field, (7, 8), others=[("unarmed", 0, False, (8, 8))])
+    strong = shield_mask(state)
+    assert strong["WAIT"] is True

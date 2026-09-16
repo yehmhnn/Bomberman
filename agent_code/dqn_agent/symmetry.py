@@ -18,7 +18,7 @@ when it's a move, need permuting.
 
 import numpy as np
 
-from .model import ACTIONS
+from .model import ACTIONS, STATE_SIZE
 
 # Direction-ordered (UP, RIGHT, DOWN, LEFT) index groups in the 34-dim state
 # vector -- see shared/features.py's and shared/opponents.py's layout
@@ -62,7 +62,7 @@ _PERMUTATIONS = {name: _permutation_for(fn) for name, fn in _TRANSFORMS.items()}
 
 # Precompute the full 34-index remap and the action remap for each symmetry,
 # so augmenting a transition at training time is just two array indexings.
-_STATE_SIZE = 34
+_STATE_SIZE = STATE_SIZE  # tracks model.py's real vector length; any new appended features stay untouched (invariant)
 _INDEX_MAPS = {}
 _ACTION_MAPS = {}
 for _name, _perm in _PERMUTATIONS.items():

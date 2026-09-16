@@ -76,6 +76,23 @@ def threatened_by_opponent_bomb(game_state, pos=None, bomb_power=BOMB_POWER):
     return False
 
 
+def threatening_opponent_count(game_state, pos=None, bomb_power=BOMB_POWER):
+    """How many living, armed opponents could hit `pos` (default: my own
+    tile) by bombing their current tile right now. Distinct from
+    threatened_by_opponent_bomb's plain yes/no: being caught between two
+    simultaneous potential blasts (crossfire) is a materially worse spot
+    than a single one -- escaping one opponent's threat can walk you
+    straight into another's.
+    """
+    field = game_state["field"]
+    pos = game_state["self"][3] if pos is None else pos
+    return sum(
+        1
+        for _, _, bombs_left, opponent_pos in game_state["others"]
+        if bombs_left and pos in blast_coords(field, opponent_pos, bomb_power)
+    )
+
+
 def opponent_features(game_state):
     danger = danger_map(game_state)
     occupied = _occupied(game_state)

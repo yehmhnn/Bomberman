@@ -13,6 +13,7 @@ from shared.opponents import (  # noqa: E402
     opponent_features,
     opponent_trapped_by_bomb,
     threatened_by_opponent_bomb,
+    threatening_opponent_count,
 )
 
 WALL = -1
@@ -110,3 +111,28 @@ def test_opponent_features_reports_count_and_bomb_availability():
     assert len(vector) == FEATURE_SIZE
     assert vector[8] == 2  # opponents alive
     assert vector[9] == 1  # unambiguously nearer opponent has a bomb available
+
+
+def test_threatening_opponent_count_is_zero_with_no_opponents():
+    state = make_state(open_field(), (6, 6))
+    assert threatening_opponent_count(state) == 0
+
+
+def test_threatening_opponent_count_counts_only_armed_opponents_in_range():
+    state = make_state(
+        open_field(), (6, 6),
+        others=[
+            ("armed_close", 0, True, (6, 8)),      # in range, armed -> counts
+            ("unarmed_close", 0, False, (8, 6)),   # in range, unarmed -> doesn't count
+            ("armed_far", 0, True, (6, 12)),       # armed but out of range -> doesn't count
+        ],
+    )
+    assert threatening_opponent_count(state) == 1
+
+
+def test_threatening_opponent_count_crossfire_from_two_opponents():
+    state = make_state(
+        open_field(), (6, 6),
+        others=[("a", 0, True, (6, 8)), ("b", 0, True, (8, 6))],
+    )
+    assert threatening_opponent_count(state) == 2
