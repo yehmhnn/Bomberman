@@ -441,3 +441,16 @@ stage7_combined_mixed4,classic,rule_based_agent,30,win,0.267,0.133,0.433
 stage7_combined_mixed4,classic,rule_based_agent,30,survived,0.267,0.133,0.433
 stage7_combined_mixed4,classic,rule_based_agent,30,time,0.218,0.156,0.284
 stage7_combined_mixed4,classic,rule_based_agent,30,think_time_mean,0.001,0.001,0.001
+stage8_qrdqn_solo_classic,classic,dqn_agent,30,score,8.200,7.300,8.933
+stage8_qrdqn_solo_classic,classic,dqn_agent,30,coins,8.200,7.300,8.933
+stage8_qrdqn_solo_classic,classic,dqn_agent,30,kills,0.000,0.000,0.000
+stage8_qrdqn_solo_classic,classic,dqn_agent,30,suicides,0.000,0.000,0.000
+stage8_qrdqn_solo_classic,classic,dqn_agent,30,suicide,0.000,0.000,0.000
+stage8_qrdqn_solo_classic,classic,dqn_agent,30,crates,110.833,98.566,120.200
+stage8_qrdqn_solo_classic,classic,dqn_agent,30,invalid,0.000,0.000,0.000
+stage8_qrdqn_solo_classic,classic,dqn_agent,30,alive_steps,379.100,372.766,385.467
+stage8_qrdqn_solo_classic,classic,dqn_agent,30,rank,1.000,1.000,1.000
+stage8_qrdqn_solo_classic,classic,dqn_agent,30,win,1.000,1.000,1.000
+stage8_qrdqn_solo_classic,classic,dqn_agent,30,survived,1.000,1.000,1.000
+stage8_qrdqn_solo_classic,classic,dqn_agent,30,time,0.380,0.365,0.397
+stage8_qrdqn_solo_classic,classic,dqn_agent,30,think_time_mean,0.001,0.001,0.001
