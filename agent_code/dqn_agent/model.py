@@ -12,12 +12,12 @@ import torch
 from torch import nn
 
 from settings import BOMB_POWER, BOMB_TIMER
-from shared.danger import danger_map
-from shared.features import RECENT_POSITIONS_MAXLEN, build_feature_vector
-from shared.features import FEATURE_SIZE as SCALAR_FEATURE_SIZE
-from shared.opponents import FEATURE_SIZE as OPPONENT_FEATURE_SIZE
-from shared.opponents import opponent_features, threatening_opponent_count
-from shared.safety import MOVE, _can_escape_own_bomb, _occupied, escape_exists, safe_action_mask, tile_free
+from .shared.danger import danger_map
+from .shared.features import RECENT_POSITIONS_MAXLEN, build_feature_vector
+from .shared.features import FEATURE_SIZE as SCALAR_FEATURE_SIZE
+from .shared.opponents import FEATURE_SIZE as OPPONENT_FEATURE_SIZE
+from .shared.opponents import opponent_features, threatening_opponent_count
+from .shared.safety import MOVE, _can_escape_own_bomb, _occupied, escape_exists, safe_action_mask, tile_free
 
 ACTIONS = ("UP", "RIGHT", "DOWN", "LEFT", "WAIT", "BOMB")
 STATE_SIZE = SCALAR_FEATURE_SIZE + OPPONENT_FEATURE_SIZE + 1  # 24 + 10 + 1 = 35

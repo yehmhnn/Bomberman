@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from shared.features import track_position
+from .shared.features import track_position
 
 from .model import DuelingQNetwork, action_mask_vector, new_recent_positions, select_action, state_to_vector
 
