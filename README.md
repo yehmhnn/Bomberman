@@ -88,6 +88,9 @@ Then continue each saved table on the full board by changing the scenario to
 `classic`. During evaluation, omit `--train 1`; this sets exploration to zero
 and applies the same safety mask to the greedy policy.
 
+The completed experiment and failure analysis are recorded in
+[STAGE2_RESULTS.md](STAGE2_RESULTS.md).
+
 ## Reproducibility
 
 - Use fixed `--seed` values for paired comparisons.
