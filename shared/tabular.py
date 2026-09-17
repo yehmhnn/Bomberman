@@ -4,7 +4,7 @@ import numpy as np
 
 from shared.danger import danger_map
 from shared.features import build_feature_vector, nearest_coin, nearest_crate
-from shared.safety import earliest_danger, safe_action_mask
+from shared.safety import MOVE, earliest_danger, escape_exists, safe_action_mask
 
 
 ACTIONS = ("UP", "RIGHT", "DOWN", "LEFT", "WAIT", "BOMB")
@@ -21,12 +21,33 @@ def state_to_features(game_state):
     """
     if game_state is None:
         return None
-    return tuple(build_feature_vector(game_state, recent_positions=None))
+    vector = build_feature_vector(game_state, recent_positions=None)
+    survivable = survivable_action_mask(game_state)
+    vector[:6] = [int(survivable[action]) for action in ACTIONS]
+    return tuple(vector)
+
+
+def survivable_action_mask(game_state):
+    """Require each allowed action to preserve a complete future escape path."""
+    danger = danger_map(game_state)
+    mask = safe_action_mask(game_state, danger)
+    position = game_state["self"][3]
+
+    for action in ACTIONS[:5]:
+        if not mask[action]:
+            continue
+        if action == "WAIT":
+            target = position
+        else:
+            dx, dy = MOVE[action]
+            target = (position[0] + dx, position[1] + dy)
+        mask[action] = escape_exists(game_state, danger, start=target)
+    return mask
 
 
 def valid_action_indices(game_state):
     """Indices of actions that are immediately safe and physically possible."""
-    mask = safe_action_mask(game_state)
+    mask = survivable_action_mask(game_state)
     allowed = [index for index, action in enumerate(ACTIONS) if mask[action]]
 
     # In a position with no survivable choice, WAIT is still an executable

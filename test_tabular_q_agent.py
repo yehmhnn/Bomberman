@@ -64,6 +64,21 @@ class TabularQAgentTests(unittest.TestCase):
         allowed = {ACTIONS[index] for index in valid_action_indices(state)}
         self.assertIn("BOMB", allowed)
 
+    def test_action_mask_rejects_wait_that_would_forfeit_escape(self):
+        state = game_state(position=(6, 6), coins=())
+        field = -np.ones((13, 13), dtype=int)
+        field[1:12, 1:12] = 0
+        for x in range(3, 11):
+            field[x, 5] = -1
+            field[x, 7] = -1
+        state["field"] = field
+        state["explosion_map"] = np.zeros_like(field)
+        state["bombs"] = [((6, 6), 3)]
+
+        allowed = {ACTIONS[index] for index in valid_action_indices(state)}
+        self.assertIn("RIGHT", allowed)
+        self.assertNotIn("WAIT", allowed)
+
     def test_potential_improves_when_moving_toward_bombable_crate(self):
         far = game_state(position=(1, 3), coins=())
         far["field"][5, 3] = 1
