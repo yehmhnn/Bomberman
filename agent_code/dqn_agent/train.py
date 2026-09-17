@@ -26,7 +26,11 @@ from .symmetry import augment_transition
 
 GAMMA = 0.95
 N_STEP = 3
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 3e-5  # was 1e-4; testing whether a lower LR avoids the repeated
+# "more training on the same lineup makes things worse" pattern (stage5->5v2,
+# stage12->13) -- a classic signature of a learning rate too high for stable
+# fine-tuning once the policy is already decent, even if it was fine (or
+# necessary for fast early progress) earlier in training from scratch.
 BATCH_SIZE = 128
 REPLAY_CAPACITY = 100_000
 MIN_REPLAY_BEFORE_TRAINING = 1_000
