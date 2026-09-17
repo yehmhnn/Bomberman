@@ -1,7 +1,27 @@
-# Preliminary Stage-1 results
+# Stage-1 results
 
-These results validate the experiment pipeline and demonstrate learned behavior;
-they are not the final hyperparameter study.
+## Shared-protocol validation result
+
+We re-evaluated both saved models with the team's shared benchmark harness on
+all 100 frozen validation seeds. Each agent played alone on `coin-heaven`, with
+exploration disabled. Scores are official collected-coin scores; confidence
+intervals are bootstrap 95% intervals produced by `evaluation/aggregate.py`.
+
+| Method | Mean score/coins | 95% confidence interval | Survival | Suicide |
+|---|---:|---:|---:|---:|
+| Tabular Q-learning | 5.59 | [4.40, 6.86] | 100% | 0% |
+| Tabular SARSA | 47.13 | [45.26, 48.80] | 100% | 0% |
+
+This confirms the original finding under the common evaluation protocol. SARSA
+collected about 94.3% of the 50 available coins, while Q-learning collected
+about 11.2%. Raw rows are stored as `stage1_tabular_q_val.csv` and
+`stage1_tabular_sarsa_val.csv` in `evaluation/results/raw/`.
+
+## Initial exploratory evaluation
+
+The following experiment predates the shared protocol and uses its own seeds.
+It is retained as development history, but should not be compared numerically
+with experiments evaluated by `evaluation/benchmark.py`.
 
 ## Controlled evaluation after 200 training rounds
 
@@ -37,10 +57,14 @@ amplifies optimistic values under this state aliasing. Further runs, learning
 curves, multiple training seeds, and hyperparameter sweeps are required before
 claiming that SARSA is generally superior.
 
-Reproduce the experiment with:
+Reproduce the shared validation result with:
 
 ```bash
-scripts/run_stage1_experiment.sh --fresh 200 20
+python evaluation/benchmark.py --tag stage1_tabular_q_val \
+  --agents tabular_q_agent --scenarios coin-heaven --split val
+python evaluation/benchmark.py --tag stage1_tabular_sarsa_val \
+  --agents tabular_sarsa_agent --scenarios coin-heaven --split val
+python evaluation/aggregate.py
 ```
 
 Watch both trained policies compete with:
