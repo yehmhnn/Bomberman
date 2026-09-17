@@ -110,4 +110,11 @@ screenshots/*.mp4
 screenshots/*.webm
 
 replays/
-results/
+/results/
+
+# benchmark scratch (raw match JSON); the CSV outputs under evaluation/results/ are kept
+evaluation/results/_stats/
+
+# local-only scaffolding, not part of the shared project
+Dockerfile.local-test
+final-project-agent-code.zip
