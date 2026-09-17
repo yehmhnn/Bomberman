@@ -34,7 +34,10 @@ EVENT_REWARDS = {
     e.BOMB_DROPPED: -0.25,
 }
 STEP_REWARD = -0.05
-USEFUL_BOMB_BONUS = 0.75
+# Placing a bomb temporarily makes Phi(s') worse because the agent enters its
+# own future blast window.  This bonus must exceed that immediate danger term;
+# the action mask already guarantees that an escape route exists.
+USEFUL_BOMB_BONUS = 3.0
 
 
 def setup_training(self):

@@ -32,7 +32,8 @@ EVENT_REWARDS = {
     e.BOMB_DROPPED: -0.25,
 }
 STEP_REWARD = -0.05
-USEFUL_BOMB_BONUS = 0.75
+# Compensate for the immediate danger-potential drop after a safe crate bomb.
+USEFUL_BOMB_BONUS = 3.0
 
 
 def setup_training(self):

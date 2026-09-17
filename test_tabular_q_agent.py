@@ -4,13 +4,19 @@ from types import SimpleNamespace
 import unittest
 
 import numpy as np
+import events as e
 
 from agent_code.tabular_q_agent.callbacks import (
     ACTIONS,
     state_to_features,
     valid_action_indices,
 )
-from agent_code.tabular_q_agent.train import ALPHA, GAMMA, update_q_table
+from agent_code.tabular_q_agent.train import (
+    ALPHA,
+    GAMMA,
+    reward_from_transition,
+    update_q_table,
+)
 from shared.features import FEATURE_SIZE, nearest_coin
 from shared.tabular import stage2_potential
 
@@ -63,6 +69,12 @@ class TabularQAgentTests(unittest.TestCase):
         far["field"][5, 3] = 1
         near = dict(far, self=("learner", 0, True, (2, 3)))
         self.assertGreater(stage2_potential(near), stage2_potential(far))
+
+    def test_safe_useful_bomb_has_positive_immediate_reward(self):
+        state = game_state(position=(3, 3), coins=())
+        state["field"][5, 3] = 1
+        reward = reward_from_transition(state, "BOMB", state, [e.BOMB_DROPPED])
+        self.assertGreater(reward, 0.0)
 
     def test_q_learning_update_matches_equation(self):
         old_state = (1, 1, 1, 1, 0, 1, 0, 0, 2)
