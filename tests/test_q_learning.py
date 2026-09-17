@@ -81,3 +81,21 @@ def test_save_and_load_without_npz_suffix(tmp_path):
     loaded = LinearQ.load(path, n_features=3, actions=("UP", "DOWN"))
     assert np.allclose(loaded.weights, q.weights)
     assert np.allclose(loaded.bias, q.bias)
+
+
+def test_update_clips_extreme_td_error():
+    q = LinearQ(n_features=3, actions=("UP", "DOWN"))
+    err = q.update([1.0, 0.0, 0.0], "UP", reward=1_000_000.0, next_features=None,
+                    next_allowed=None, alpha=1.0, gamma=0.9, done=True)
+    assert abs(err) <= 5.0 + 1e-9
+    assert abs(q.weights[0, 0]) <= 5.0 + 1e-9
+
+
+def test_clip_bounds_a_single_update_even_from_an_already_huge_weight():
+    q = LinearQ(n_features=3, actions=("UP", "DOWN"))
+    q.weights[0] = 1_000_000.0  # simulate a weight row that already diverged
+    before = q.weights[0].copy()
+    q.update([1.0, 1.0, 1.0], "UP", reward=1.0, next_features=None, next_allowed=None,
+              alpha=0.01, gamma=0.95, done=True)
+    max_delta = np.max(np.abs(q.weights[0] - before))
+    assert max_delta <= 0.01 * 5.0 * 1.0 + 1e-9  # alpha * TD_ERROR_CLIP * max|feature|

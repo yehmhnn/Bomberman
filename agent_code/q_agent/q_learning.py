@@ -1,7 +1,7 @@
 """Linear Q-function and one-step Q-learning update."""
 import numpy as np
 
-from shared.features import FEATURE_SIZE
+from .shared.features import FEATURE_SIZE
 
 ACTIONS = ("UP", "RIGHT", "DOWN", "LEFT", "WAIT", "BOMB")
 TD_ERROR_CLIP = 5.0

@@ -558,3 +558,16 @@ stage9_qrdqn_mixed4,classic,rule_based_agent,30,win,0.167,0.033,0.333
 stage9_qrdqn_mixed4,classic,rule_based_agent,30,survived,0.200,0.067,0.334
 stage9_qrdqn_mixed4,classic,rule_based_agent,30,time,0.176,0.122,0.238
 stage9_qrdqn_mixed4,classic,rule_based_agent,30,think_time_mean,0.001,0.001,0.001
+stage1_qagent_coinheaven,coin-heaven,q_agent,20,score,8.312,7.187,9.387
+stage1_qagent_coinheaven,coin-heaven,q_agent,20,coins,8.312,7.187,9.387
+stage1_qagent_coinheaven,coin-heaven,q_agent,20,kills,0.000,0.000,0.000
+stage1_qagent_coinheaven,coin-heaven,q_agent,20,suicides,0.000,0.000,0.000
+stage1_qagent_coinheaven,coin-heaven,q_agent,20,suicide,0.000,0.000,0.000
+stage1_qagent_coinheaven,coin-heaven,q_agent,20,crates,0.000,0.000,0.000
+stage1_qagent_coinheaven,coin-heaven,q_agent,20,invalid,0.138,0.075,0.200
+stage1_qagent_coinheaven,coin-heaven,q_agent,20,alive_steps,400.000,400.000,400.000
+stage1_qagent_coinheaven,coin-heaven,q_agent,20,rank,2.500,2.500,2.500
+stage1_qagent_coinheaven,coin-heaven,q_agent,20,win,0.237,0.212,0.250
+stage1_qagent_coinheaven,coin-heaven,q_agent,20,survived,1.000,1.000,1.000
+stage1_qagent_coinheaven,coin-heaven,q_agent,20,time,0.337,0.315,0.360
+stage1_qagent_coinheaven,coin-heaven,q_agent,20,think_time_mean,0.001,0.001,0.001
