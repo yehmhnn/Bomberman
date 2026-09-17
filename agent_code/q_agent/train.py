@@ -1,10 +1,10 @@
 """One-step linear Q-learning updates."""
 from pathlib import Path
 
-from .shared.features import build_feature_vector
 from .shared.safety import safe_action_mask
 from .q_learning import ACTIONS
 from .rewards import reward_from_transition
+from .state import build_state_vector
 
 MODEL_FILE = Path(__file__).with_name("model.npz")
 ALPHA = 0.01
@@ -24,7 +24,7 @@ def game_events_occurred(self, old_game_state, self_action, new_game_state, even
     reward = reward_from_transition(old_game_state, new_game_state, events)
     next_mask = safe_action_mask(new_game_state)
     next_allowed = tuple(a for a in ACTIONS if next_mask[a])
-    next_features = build_feature_vector(new_game_state, self.recent_positions)
+    next_features = build_state_vector(new_game_state, self.recent_positions)
     self.q.update(self.last_features, self_action, reward, next_features, next_allowed,
                   ALPHA, GAMMA, done=False)
 

@@ -1,14 +1,14 @@
 """Linear Q-function and one-step Q-learning update."""
 import numpy as np
 
-from .shared.features import FEATURE_SIZE
+from .state import N_FEATURES
 
 ACTIONS = ("UP", "RIGHT", "DOWN", "LEFT", "WAIT", "BOMB")
 TD_ERROR_CLIP = 5.0
 
 
 class LinearQ:
-    def __init__(self, n_features=FEATURE_SIZE, actions=ACTIONS):
+    def __init__(self, n_features=N_FEATURES, actions=ACTIONS):
         self.actions = actions
         self.weights = np.zeros((len(actions), n_features))
         self.bias = np.zeros(len(actions))
@@ -66,12 +66,15 @@ class LinearQ:
         np.savez(path, weights=self.weights, bias=self.bias)
 
     @classmethod
-    def load(cls, path, n_features=FEATURE_SIZE, actions=ACTIONS):
+    def load(cls, path, n_features=N_FEATURES, actions=ACTIONS):
         path = str(path)
         if not path.endswith(".npz"):
             path += ".npz"
         q = cls(n_features, actions)
         data = np.load(path)
+        assert data["weights"].shape == (len(actions), n_features), (
+            f"checkpoint shape {data['weights'].shape} != expected {(len(actions), n_features)}"
+        )
         q.weights = data["weights"]
         q.bias = data["bias"]
         return q

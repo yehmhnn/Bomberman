@@ -571,3 +571,16 @@ stage1_qagent_coinheaven,coin-heaven,q_agent,20,win,0.237,0.212,0.250
 stage1_qagent_coinheaven,coin-heaven,q_agent,20,survived,1.000,1.000,1.000
 stage1_qagent_coinheaven,coin-heaven,q_agent,20,time,0.337,0.315,0.360
 stage1_qagent_coinheaven,coin-heaven,q_agent,20,think_time_mean,0.001,0.001,0.001
+stage2_qagent_opponentfeatures_coinheaven,coin-heaven,q_agent,20,score,10.900,10.238,11.488
+stage2_qagent_opponentfeatures_coinheaven,coin-heaven,q_agent,20,coins,10.900,10.238,11.488
+stage2_qagent_opponentfeatures_coinheaven,coin-heaven,q_agent,20,kills,0.000,0.000,0.000
+stage2_qagent_opponentfeatures_coinheaven,coin-heaven,q_agent,20,suicides,0.000,0.000,0.000
+stage2_qagent_opponentfeatures_coinheaven,coin-heaven,q_agent,20,suicide,0.000,0.000,0.000
+stage2_qagent_opponentfeatures_coinheaven,coin-heaven,q_agent,20,crates,0.000,0.000,0.000
+stage2_qagent_opponentfeatures_coinheaven,coin-heaven,q_agent,20,invalid,0.312,0.212,0.438
+stage2_qagent_opponentfeatures_coinheaven,coin-heaven,q_agent,20,alive_steps,400.000,400.000,400.000
+stage2_qagent_opponentfeatures_coinheaven,coin-heaven,q_agent,20,rank,2.500,2.500,2.500
+stage2_qagent_opponentfeatures_coinheaven,coin-heaven,q_agent,20,win,0.225,0.188,0.250
+stage2_qagent_opponentfeatures_coinheaven,coin-heaven,q_agent,20,survived,1.000,1.000,1.000
+stage2_qagent_opponentfeatures_coinheaven,coin-heaven,q_agent,20,time,0.806,0.735,0.864
+stage2_qagent_opponentfeatures_coinheaven,coin-heaven,q_agent,20,think_time_mean,0.002,0.002,0.002
