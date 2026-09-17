@@ -1,4 +1,4 @@
-"""Focused unit tests for the Stage-1 tabular Q-learning agent."""
+"""Focused unit tests for the Stage-2 tabular Q-learning agent."""
 
 from types import SimpleNamespace
 import unittest
@@ -7,10 +7,12 @@ import numpy as np
 
 from agent_code.tabular_q_agent.callbacks import (
     ACTIONS,
-    shortest_coin_directions,
     state_to_features,
+    valid_action_indices,
 )
 from agent_code.tabular_q_agent.train import ALPHA, GAMMA, update_q_table
+from shared.features import FEATURE_SIZE, nearest_coin
+from shared.tabular import stage2_potential
 
 
 def game_state(position=(1, 1), coins=((3, 1),)):
@@ -36,14 +38,31 @@ class SilentLogger:
 
 class TabularQAgentTests(unittest.TestCase):
     def test_shortest_path_points_right(self):
-        directions, distance = shortest_coin_directions(game_state())
-        self.assertEqual(directions, {ACTIONS.index("RIGHT")})
+        direction, distance = nearest_coin(game_state())
+        self.assertEqual(direction, "RIGHT")
         self.assertEqual(distance, 2)
 
-    def test_state_is_small_and_hashable(self):
+    def test_state_has_shared_fixed_size_and_is_hashable(self):
         features = state_to_features(game_state())
-        self.assertEqual(len(features), 9)
+        self.assertEqual(len(features), FEATURE_SIZE)
         self.assertIsInstance(hash(features), int)
+
+    def test_action_mask_blocks_immediate_blast_and_allows_safe_bomb(self):
+        state = game_state(position=(3, 3), coins=())
+        state["bombs"] = [((3, 1), 0)]
+        allowed = {ACTIONS[index] for index in valid_action_indices(state)}
+        self.assertNotIn("UP", allowed)
+        self.assertIn("LEFT", allowed)
+
+        state["bombs"] = []
+        allowed = {ACTIONS[index] for index in valid_action_indices(state)}
+        self.assertIn("BOMB", allowed)
+
+    def test_potential_improves_when_moving_toward_bombable_crate(self):
+        far = game_state(position=(1, 3), coins=())
+        far["field"][5, 3] = 1
+        near = dict(far, self=("learner", 0, True, (2, 3)))
+        self.assertGreater(stage2_potential(near), stage2_potential(far))
 
     def test_q_learning_update_matches_equation(self):
         old_state = (1, 1, 1, 1, 0, 1, 0, 0, 2)

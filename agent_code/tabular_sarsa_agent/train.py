@@ -1,4 +1,4 @@
-"""One-step tabular SARSA updates for the Stage-1 agent."""
+"""One-step tabular SARSA updates for the Stage-2 agent."""
 
 from pathlib import Path
 import pickle
@@ -6,11 +6,12 @@ import pickle
 import numpy as np
 
 import events as e
+from shared.features import bomb_hits_crate
+from shared.tabular import stage2_potential
 from .callbacks import (
     ACTIONS,
     MODEL_FILE,
     choose_action,
-    coin_potential,
     q_values,
     state_to_features,
 )
@@ -23,10 +24,15 @@ EPSILON_MIN = 0.05
 EPSILON_DECAY = 0.995
 EVENT_REWARDS = {
     e.COIN_COLLECTED: 10.0,
-    e.INVALID_ACTION: -2.0,
-    e.WAITED: -0.5,
+    e.CRATE_DESTROYED: 2.0,
+    e.KILLED_SELF: -30.0,
+    e.GOT_KILLED: -30.0,
+    e.INVALID_ACTION: -5.0,
+    e.WAITED: -0.2,
+    e.BOMB_DROPPED: -0.25,
 }
 STEP_REWARD = -0.05
+USEFUL_BOMB_BONUS = 0.75
 
 
 def setup_training(self):
@@ -46,7 +52,7 @@ def game_events_occurred(
     """Sample a' from the current policy, then update using Q(s', a')."""
     next_action = choose_action(self, new_game_state)
     next_state = state_to_features(new_game_state)
-    reward = reward_from_transition(old_game_state, new_game_state, events)
+    reward = reward_from_transition(old_game_state, self_action, new_game_state, events)
     update_sarsa(
         self,
         state_to_features(old_game_state),
@@ -67,7 +73,7 @@ def end_of_round(
     last_action: str,
     events: list,
 ):
-    reward = reward_from_transition(last_game_state, None, events)
+    reward = reward_from_transition(last_game_state, last_action, None, events)
     update_sarsa(
         self,
         state_to_features(last_game_state),
@@ -120,11 +126,14 @@ def update_sarsa(
 
 def reward_from_transition(
     old_game_state: dict,
+    action: str,
     new_game_state: dict,
     events: list,
 ) -> float:
     reward = STEP_REWARD + sum(EVENT_REWARDS.get(event, 0.0) for event in events)
-    shaping = GAMMA * coin_potential(new_game_state) - coin_potential(old_game_state)
+    if action == "BOMB" and bomb_hits_crate(old_game_state, old_game_state["self"][3]):
+        reward += USEFUL_BOMB_BONUS
+    shaping = GAMMA * stage2_potential(new_game_state) - stage2_potential(old_game_state)
     return reward + shaping
 
 

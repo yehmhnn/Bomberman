@@ -70,6 +70,24 @@ controlled difference is the TD target: Q-learning uses the largest next-state
 value, while SARSA uses the value of the next action sampled from its current
 epsilon-greedy policy.
 
+## Stage 2: crates and safe bombing
+
+Stage 2 uses the verified functions in `shared/` to represent blast timing,
+safe actions, coin/crate targets, and whether a bomb can be escaped. It stores
+its tables separately as `q_table_stage2.pkl`, so training cannot overwrite the
+Stage 1 models. Start the crate curriculum with:
+
+```bash
+python main.py play --agents tabular_q_agent --train 1 \
+  --scenario loot-crate --no-gui --n-rounds 2000
+python main.py play --agents tabular_sarsa_agent --train 1 \
+  --scenario loot-crate --no-gui --n-rounds 2000
+```
+
+Then continue each saved table on the full board by changing the scenario to
+`classic`. During evaluation, omit `--train 1`; this sets exploration to zero
+and applies the same safety mask to the greedy policy.
+
 ## Reproducibility
 
 - Use fixed `--seed` values for paired comparisons.
