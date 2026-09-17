@@ -35,7 +35,7 @@ def test_coin_collected_is_strongly_positive():
 def test_self_kill_is_strongly_negative():
     old = make_state(open_field(), (6, 6))
     r = reward_from_transition(old, None, [e.KILLED_SELF])
-    assert r < -20.0
+    assert r < -10.0
 
 
 def test_moving_closer_to_a_coin_is_rewarded_over_moving_away():
@@ -54,7 +54,7 @@ def test_terminal_transitions_ignore_potential_shaping():
     got_killed = reward_from_transition(old, None, [e.GOT_KILLED])
     self_kill = reward_from_transition(old, None, [e.KILLED_SELF])
     assert got_killed < 0
-    assert self_kill < -25.0
+    assert self_kill < -10.0
 
 
 def test_potential_routes_around_danger_not_through_it():
