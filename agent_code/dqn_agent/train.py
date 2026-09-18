@@ -24,12 +24,12 @@ from .model import (
 from .replay import PrioritizedReplayBuffer
 from .symmetry import augment_transition
 
-GAMMA = 0.99  # hparam pass, run A: was 0.95 (~20-step effective horizon);
-# testing whether a longer horizon (~100 steps) helps credit assignment for
-# multi-step plans (retreat-then-return-to-bomb, hunting) -- compare against
-# stage12 (identical recipe otherwise: stage11 checkpoint, reset, 6000 rounds
-# vs the same mixed4 lineup, LEARNING_RATE=1e-4, N_STEP=3).
-N_STEP = 3
+GAMMA = 0.95  # run A (0.99) was a clean regression -- back to stage12's value.
+N_STEP = 5  # hparam pass, run B: was 3. Testing whether propagating reward
+# signal 5 steps instead of 3 speeds up credit assignment for delayed outcomes
+# (bomb placed now, crate/kill confirmed a few steps later) without run A's
+# failure mode, since this only changes the bootstrap horizon of each update,
+# not the discount applied to the value function itself.
 LEARNING_RATE = 1e-4  # stage15 tested 3e-5 to fight the "more training on the
 # same lineup makes things worse" pattern (stage5->5v2, stage12->13); it helped
 # but didn't beat stage12 either, so not adopted -- back to the stage12 recipe.
