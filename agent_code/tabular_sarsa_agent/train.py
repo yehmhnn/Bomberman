@@ -6,8 +6,8 @@ import pickle
 import numpy as np
 
 import events as e
-from shared.features import bomb_hits_crate
-from shared.tabular import stage2_potential
+from .shared.features import bomb_hits_crate
+from .shared.tabular import stage2_potential
 from .callbacks import (
     ACTIONS,
     MODEL_FILE,

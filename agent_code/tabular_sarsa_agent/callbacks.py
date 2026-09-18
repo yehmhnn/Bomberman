@@ -6,7 +6,7 @@ import pickle
 import numpy as np
 
 
-from shared.tabular import ACTIONS, state_to_features, valid_action_indices
+from .shared.tabular import ACTIONS, state_to_features, valid_action_indices
 
 MODEL_FILE = Path(__file__).with_name("q_table_stage2.pkl")
 

@@ -17,8 +17,8 @@ from agent_code.tabular_q_agent.train import (
     reward_from_transition,
     update_q_table,
 )
-from shared.features import FEATURE_SIZE, nearest_coin
-from shared.tabular import stage2_potential
+from agent_code.tabular_q_agent.shared.features import FEATURE_SIZE, nearest_coin
+from agent_code.tabular_q_agent.shared.tabular import stage2_potential
 
 
 def game_state(position=(1, 1), coins=((3, 1),)):
