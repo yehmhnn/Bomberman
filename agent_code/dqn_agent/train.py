@@ -48,7 +48,13 @@ GRAD_CLIP_NORM = 10.0
 
 EPSILON_START = 1.0
 EPSILON_END = 0.05
-EPSILON_DECAY_STEPS = 150_000
+EPSILON_DECAY_STEPS = 400_000  # hparam pass, run D: was 150_000. Each fresh
+# mixed4 run accumulates ~1.8-2.3M total steps over 6000 rounds, so the old
+# value hit the epsilon floor only 6-8% into training -- over 90% of every
+# run so far trained at floor exploration. Testing whether sustaining
+# meaningful exploration further into the run helps the agent discover
+# better strategies under the now-improved (N_STEP=5, TARGET_SYNC=1000)
+# reward propagation. Built on run C, our current best.
 
 SAVE_EVERY_ROUNDS = 25
 SNAPSHOT_DIR = Path(__file__).with_name("snapshots")
