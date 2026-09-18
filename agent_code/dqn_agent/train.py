@@ -24,13 +24,15 @@ from .model import (
 from .replay import PrioritizedReplayBuffer
 from .symmetry import augment_transition
 
-GAMMA = 0.95
+GAMMA = 0.99  # hparam pass, run A: was 0.95 (~20-step effective horizon);
+# testing whether a longer horizon (~100 steps) helps credit assignment for
+# multi-step plans (retreat-then-return-to-bomb, hunting) -- compare against
+# stage12 (identical recipe otherwise: stage11 checkpoint, reset, 6000 rounds
+# vs the same mixed4 lineup, LEARNING_RATE=1e-4, N_STEP=3).
 N_STEP = 3
-LEARNING_RATE = 3e-5  # was 1e-4; testing whether a lower LR avoids the repeated
-# "more training on the same lineup makes things worse" pattern (stage5->5v2,
-# stage12->13) -- a classic signature of a learning rate too high for stable
-# fine-tuning once the policy is already decent, even if it was fine (or
-# necessary for fast early progress) earlier in training from scratch.
+LEARNING_RATE = 1e-4  # stage15 tested 3e-5 to fight the "more training on the
+# same lineup makes things worse" pattern (stage5->5v2, stage12->13); it helped
+# but didn't beat stage12 either, so not adopted -- back to the stage12 recipe.
 BATCH_SIZE = 128
 REPLAY_CAPACITY = 100_000
 MIN_REPLAY_BEFORE_TRAINING = 1_000
