@@ -44,7 +44,13 @@ TARGET_SYNC_EVERY_STEPS = 1_000  # hparam pass, run C: was 2000. Testing
 # target network exists to manage. Built on top of run B (N_STEP=5), our
 # current best, not stage12's original recipe -- coordinate-ascent style,
 # one variable at a time from the best point found so far.
-GRAD_CLIP_NORM = 10.0
+GRAD_CLIP_NORM = 5.0  # hparam pass, run E: was 10.0. Run C (N_STEP=5,
+# TARGET_SYNC=1000) traded safety for score; run D (slower epsilon decay)
+# traded score for safety. Testing a different axis: tighter gradient
+# clipping could reduce training variance/instability -- possibly cutting
+# erratic bad decisions (a plausible suicide-rate contributor) without
+# necessarily sacrificing run C's aggression gains, rather than just
+# landing on another point of the same tradeoff curve. Built on run C.
 
 EPSILON_START = 1.0
 EPSILON_END = 0.05
