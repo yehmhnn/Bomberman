@@ -40,7 +40,7 @@ When multiple identical agents play the same match, their rows are dependent (th
 
 ### Model selection rule
 
-We score each candidate on a held-out opponent mix with fixed weights: score 40%, win rate 25%, survival 20%, kills 10%, latency and reliability 5%. We decided these weights now so we cannot fit the rule to the results later.
+We score each candidate on a common evaluation mix with fixed weights: score 40%, win rate 25%, survival 20%, kills 10%, latency and reliability 5%. We decided these weights now so we cannot fit the rule to the results later.
 
 Why these weights:
 - Score gets the largest weight because the tournament ranking uses the official score.
@@ -49,11 +49,11 @@ Why these weights:
 - Kills are worth 5 points each, so they count, but they are risky and noisy, so the weight is smaller.
 - Latency and reliability get a small weight, but it is really a gate: an agent that times out or crashes loses the match.
 
-Held-out opponent mix (none of these line-ups are used for training):
+Common evaluation line-ups (we used to call this "held-out," which overstates it -- our agents already trained against `peaceful_agent`, `coin_collector_agent` and `rule_based_agent` directly, so the opponent types are not unseen the way a real held-out set would be. What is genuinely held out is the seeds: no candidate is ever tuned against the validation or test seeds. These four line-ups are just a fixed, agreed set of matchups every candidate is measured on the same way):
 - our agent against 3x `rule_based_agent`
 - our agent against 1x `rule_based_agent`, 1x `coin_collector_agent`, 1x `peaceful_agent`
 - our agent against 3x `coin_collector_agent`
-- our agent against 1x `rule_based_agent` and 2x a frozen copy of our other agent
+- our agent against 1x `rule_based_agent` and 2x a frozen copy of our other agent -- "frozen" means a specific, permanently pinned checkpoint of whichever agent is playing the reference role, not whatever that agent's live model.pt happens to be that day (see `agent_code/dqn_agent_frozen_ref/` for the current pinned dqn_agent reference, and its commit hash, used for this line-up from here on)
 
 We will run these on the validation seeds during development and on the test seeds once at the end. Our agent always starts in the same slot. The line-ups get equal weight unless we explain a reason to change that.
 
