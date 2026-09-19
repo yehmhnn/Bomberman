@@ -40,6 +40,9 @@ crate destruction and safe bombing, hunting non-aggressive opponents, and full
 competition. See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the experiment plan and
 success criteria.
 
+Current tabular opponent experiments and limitations are recorded in
+[STAGE34_RESULTS.md](STAGE34_RESULTS.md).
+
 ## First training run
 
 The initial `tabular_q_agent` intentionally handles only navigation and visible
@@ -90,6 +93,44 @@ and applies the same safety mask to the greedy policy.
 
 The completed experiment and failure analysis are recorded in
 [STAGE2_RESULTS.md](STAGE2_RESULTS.md).
+
+## Stages 3 and 4: opponents and full competition
+
+The tabular agents now use the same 34-value state: the 24 Stage-2 navigation,
+crate and bomb-safety values plus 10 opponent direction, distance, trapping and
+threat values. An unseen opponent-aware state is initialized from the matching
+24-value Stage-2 entry, so the curriculum retains learned navigation and safe
+bombing instead of starting from zero.
+
+Run the same four curriculum phases for each of `tabular_q_agent` and
+`tabular_sarsa_agent`. The runner cycles over all frozen training seeds and
+records each run under `evaluation/results/training/`:
+
+```bash
+python evaluation/train_tabular.py --tag q_s3_peaceful \
+  --agent tabular_q_agent --stage 3 --opponents \
+  peaceful_agent --episodes 2000 --fresh
+python evaluation/train_tabular.py --tag q_s3_coin \
+  --agent tabular_q_agent --stage 3 --opponents \
+  coin_collector_agent --episodes 3000
+python evaluation/train_tabular.py --tag q_s4_rule \
+  --agent tabular_q_agent --stage 4 --opponents \
+  rule_based_agent rule_based_agent rule_based_agent --episodes 4000 --fresh
+python evaluation/train_tabular.py --tag q_s4_mixed \
+  --agent tabular_q_agent --stage 4 --opponents \
+  rule_based_agent coin_collector_agent peaceful_agent --episodes 4000
+```
+
+Replace `tabular_q_agent` and the `q_` tag prefix with
+`tabular_sarsa_agent` and `sarsa_` for the controlled SARSA runs. `--fresh`
+only removes the selected Stage-3 or Stage-4 table; it does not touch the
+Stage-1 or Stage-2 checkpoints. Stage 4 initializes unseen states from Stage 3.
+
+Use `evaluation/benchmark.py` with the line-ups agreed in
+`EXPERIMENT_PROTOCOL.md`. Run the full validation set for checkpoint selection
+and use the test split exactly once after every method and hyperparameter is
+frozen. Any proposed change to the shared line-ups belongs in a separate PR and
+must be accepted before it is used for cross-method claims.
 
 ## Reproducibility
 

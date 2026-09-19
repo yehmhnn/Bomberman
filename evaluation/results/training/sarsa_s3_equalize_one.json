@@ -1,0 +1,16 @@
+{
+  "tag": "sarsa_s3_equalize_one",
+  "git_commit": "af6b511",
+  "agent": "tabular_sarsa_agent",
+  "stage": 3,
+  "scenario": "classic",
+  "opponents": [
+    "coin_collector_agent"
+  ],
+  "episodes": 1,
+  "training_seed_count": 200,
+  "fresh": false,
+  "reset_epsilon": false,
+  "elapsed_seconds": 1.69,
+  "model_file": "agent_code/tabular_sarsa_agent/q_table_stage3.pkl"
+}

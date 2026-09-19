@@ -1,5 +1,6 @@
-"""Action selection for the Stage-2 tabular Q-learning agent."""
+"""Action selection for the opponent-aware tabular Q-learning agent."""
 
+import os
 from pathlib import Path
 import pickle
 
@@ -8,7 +9,14 @@ import numpy as np
 
 from .shared.tabular import ACTIONS, state_to_features, valid_action_indices
 
-MODEL_FILE = Path(__file__).with_name("q_table_stage2.pkl")
+MODEL_STAGE = int(os.environ.get("TABULAR_STAGE", "4"))
+if MODEL_STAGE not in (3, 4):
+    raise ValueError("TABULAR_STAGE must be 3 or 4")
+MODEL_FILE = Path(__file__).with_name(f"q_table_stage{MODEL_STAGE}.pkl")
+PRIOR_MODEL_FILES = (
+    ([Path(__file__).with_name("q_table_stage3.pkl")] if MODEL_STAGE == 4 else [])
+    + [Path(__file__).with_name("q_table_stage2.pkl")]
+)
 
 
 def setup(self):
@@ -20,6 +28,14 @@ def setup(self):
     else:
         self.q_table = {}
         self.logger.info("Starting with an empty Q table")
+
+    self.prior_q_tables = []
+    for prior_file in PRIOR_MODEL_FILES:
+        if prior_file == MODEL_FILE or not prior_file.is_file():
+            continue
+        with prior_file.open("rb") as file:
+            self.prior_q_tables.append(pickle.load(file))
+        self.logger.info("Using %s to initialize unseen states", prior_file.name)
 
     # A dedicated generator makes random tie-breaking and exploration seedable.
     self.rng = np.random.default_rng()
@@ -39,7 +55,7 @@ def act(self, game_state: dict) -> str:
         action_index = int(self.rng.choice(allowed))
         self.logger.debug("Exploring with epsilon %.3f", self.epsilon)
     else:
-        values = q_values(self.q_table, state)
+        values = q_values(self.q_table, state, self.prior_q_tables)
         best_value = np.max(values[allowed])
         best_actions = allowed[np.isclose(values[allowed], best_value)]
         action_index = int(self.rng.choice(best_actions))
@@ -47,8 +63,20 @@ def act(self, game_state: dict) -> str:
     return ACTIONS[action_index]
 
 
-def q_values(q_table: dict, state: tuple) -> np.ndarray:
-    """Return Q(s, ·), creating six zero estimates for an unseen state."""
+def q_values(q_table: dict, state: tuple, prior_q_tables=()) -> np.ndarray:
+    """Return Q(s, .), transferring the closest earlier-stage estimate."""
     if state not in q_table:
-        q_table[state] = np.zeros(len(ACTIONS), dtype=np.float64)
+        initial = None
+        for prior in prior_q_tables:
+            if state in prior:
+                initial = prior[state]
+                break
+            stage2_state = state[:24]
+            if stage2_state in prior:
+                initial = prior[stage2_state]
+                break
+        q_table[state] = (
+            np.zeros(len(ACTIONS), dtype=np.float64)
+            if initial is None else np.asarray(initial, dtype=np.float64).copy()
+        )
     return q_table[state]

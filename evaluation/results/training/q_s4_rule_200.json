@@ -1,0 +1,16 @@
+{
+  "tag": "q_s4_rule_200",
+  "git_commit": "af6b511",
+  "agent": "tabular_q_agent",
+  "stage": 4,
+  "scenario": "classic",
+  "opponents": [
+    "rule_based_agent"
+  ],
+  "episodes": 200,
+  "training_seed_count": 200,
+  "fresh": true,
+  "reset_epsilon": false,
+  "elapsed_seconds": 378.43,
+  "model_file": "agent_code/tabular_q_agent/q_table_stage4.pkl"
+}

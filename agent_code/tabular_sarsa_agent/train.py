@@ -1,5 +1,7 @@
-"""One-step tabular SARSA updates for the Stage-2 agent."""
+"""One-step tabular SARSA updates for curriculum Stages 3 and 4."""
 
+import json
+import os
 from pathlib import Path
 import pickle
 
@@ -7,7 +9,8 @@ import numpy as np
 
 import events as e
 from .shared.features import bomb_hits_crate
-from .shared.tabular import stage2_potential
+from .shared.opponents import bomb_hits_opponent, opponent_features
+from .shared.tabular import stage34_potential
 from .callbacks import (
     ACTIONS,
     MODEL_FILE,
@@ -25,8 +28,10 @@ EPSILON_DECAY = 0.995
 EVENT_REWARDS = {
     e.COIN_COLLECTED: 10.0,
     e.CRATE_DESTROYED: 2.0,
-    e.KILLED_SELF: -30.0,
+    e.KILLED_OPPONENT: 50.0,
+    e.KILLED_SELF: -40.0,
     e.GOT_KILLED: -30.0,
+    e.SURVIVED_ROUND: 5.0,
     e.INVALID_ACTION: -5.0,
     e.WAITED: -0.2,
     e.BOMB_DROPPED: -0.25,
@@ -34,11 +39,22 @@ EVENT_REWARDS = {
 STEP_REWARD = -0.05
 # Compensate for the immediate danger-potential drop after a safe crate bomb.
 USEFUL_BOMB_BONUS = 3.0
+OPPONENT_BOMB_BONUS = 5.0
+TRAPPING_BOMB_BONUS = 5.0
+META_FILE = MODEL_FILE.with_suffix(".meta.json")
 
 
 def setup_training(self):
     self.training_round = 0
-    self.epsilon = EPSILON_START
+    if META_FILE.is_file() and os.environ.get("TABULAR_RESET_EPSILON") != "1":
+        try:
+            self.training_round = int(json.loads(META_FILE.read_text())["training_round"])
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+            self.logger.warning("Ignoring invalid training metadata in %s", META_FILE)
+    self.epsilon = max(
+        EPSILON_MIN,
+        EPSILON_START * EPSILON_DECAY ** self.training_round,
+    )
     self.planned_state = None
     self.planned_action = None
 
@@ -106,12 +122,15 @@ def update_sarsa(
         return
 
     action_index = ACTIONS.index(action)
-    current_q = q_values(self.q_table, state)[action_index]
+    prior_q_tables = getattr(self, "prior_q_tables", ())
+    current_q = q_values(self.q_table, state, prior_q_tables)[action_index]
     if next_state is None:
         target = reward
     else:
         next_action_index = ACTIONS.index(next_action)
-        target = reward + GAMMA * q_values(self.q_table, next_state)[next_action_index]
+        target = reward + GAMMA * q_values(
+            self.q_table, next_state, prior_q_tables
+        )[next_action_index]
 
     td_error = target - current_q
     self.q_table[state][action_index] += ALPHA * td_error
@@ -134,7 +153,11 @@ def reward_from_transition(
     reward = STEP_REWARD + sum(EVENT_REWARDS.get(event, 0.0) for event in events)
     if action == "BOMB" and bomb_hits_crate(old_game_state, old_game_state["self"][3]):
         reward += USEFUL_BOMB_BONUS
-    shaping = GAMMA * stage2_potential(new_game_state) - stage2_potential(old_game_state)
+    if action == "BOMB" and bomb_hits_opponent(old_game_state, old_game_state["self"][3]):
+        reward += OPPONENT_BOMB_BONUS
+        if opponent_features(old_game_state)[6]:
+            reward += TRAPPING_BOMB_BONUS
+    shaping = GAMMA * stage34_potential(new_game_state) - stage34_potential(old_game_state)
     return reward + shaping
 
 
@@ -143,3 +166,7 @@ def save_model(self):
     with temporary_file.open("wb") as file:
         pickle.dump(self.q_table, file)
     temporary_file.replace(MODEL_FILE)
+    META_FILE.write_text(
+        json.dumps({"training_round": self.training_round}) + "\n",
+        encoding="utf-8",
+    )
