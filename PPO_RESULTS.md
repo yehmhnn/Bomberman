@@ -94,3 +94,35 @@ steps), with zero invalid actions and a mean action time of 0.000393 seconds.
 The 0.02 checkpoint is therefore the preferred Stage-1 initialization for the
 next curriculum experiment; further entropy tuning should remain a separate
 ablation rather than changing the shared evaluation protocol.
+
+## Reproducible Stage 2 curriculum run
+
+The preferred entropy-0.02 Stage-1 checkpoint was continued for 2,000
+`loot-crate` rounds, distributed evenly over the 200 shared training seeds.
+This added 802,000 transitions, for 1,065,677 cumulative observed and optimized
+transitions. The Stage-2 checkpoint ended with no unfinished rollout.
+
+Evaluation on all 100 validation seeds produced:
+
+| Metric | Mean | 95% CI |
+|---|---:|---:|
+| Score / coins | 5.49 | [3.71, 7.48] |
+| Crates destroyed | 16.44 | [11.39, 22.05] |
+| Survival | 100% | [100%, 100%] |
+| Suicide | 0% | [0%, 0%] |
+| Invalid actions | 0.00 | [0.00, 0.00] |
+| Alive steps | 400.00 | [400.00, 400.00] |
+
+The policy learned safe bomb use but not efficient board completion: it dropped
+8.95 bombs per game on average, yet all 100 games reached the step limit. Mean
+entropy over the final ten updates was only 0.069 nats. Although final training
+updates contained more crate destruction than early updates, this did not
+generalize into a strong deterministic validation policy.
+
+This checkpoint should not yet be promoted into Stage 3. The next controlled
+Stage-2 experiment should target the efficiency bottleneck while preserving
+the action-safety mask—for example, stronger progress/time-pressure shaping or
+an entropy schedule—then repeat the unchanged 100-seed validation. The older
+exploratory Stage-2 checkpoint scored higher, but it was trained through a
+different, unseeded history and therefore is evidence for possible headroom,
+not a directly controlled comparison.
