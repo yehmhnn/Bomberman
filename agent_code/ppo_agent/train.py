@@ -83,7 +83,15 @@ def setup_training(self):
 def _potential(vector):
     if vector is None:
         return 0.0
-    goal = -min(vector[COIN_DIST_IDX], vector[CRATE_DIST_IDX])
+    # The feature representation uses zero both when a target is absent and
+    # when its distance is zero. An absent target must not win the minimum and
+    # erase the distance signal from the other target type.
+    distances = [
+        float(vector[index])
+        for index in (COIN_DIST_IDX, CRATE_DIST_IDX)
+        if vector[index] > 0
+    ]
+    goal = -min(distances) if distances else 0.0
     danger = -2.0 if vector[IN_DANGER_IDX] > 0 else 0.0
     return float(goal + danger)
 

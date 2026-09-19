@@ -70,6 +70,12 @@ For example, the entropy candidate is trained with
 `--variant entropy02 --entropy-coefficient 0.02` and evaluated with both
 `PPO_STAGE=1` and `PPO_VARIANT=entropy02` set.
 
+When a new later-stage variant should start from a differently named earlier
+checkpoint, pass `--init-variant`. For example, the Stage-2 goal-potential fix
+uses `--variant goalfix --init-variant entropy02`: it writes
+`model_stage2_goalfix.pt` while initializing from
+`model_stage1_entropy02.pt`.
+
 Unfinished 1,024-transition rollouts are stored in the stage checkpoint. This
 matters because the runner starts a fresh game process for each board seed:
 without rollout persistence, every process boundary would silently discard

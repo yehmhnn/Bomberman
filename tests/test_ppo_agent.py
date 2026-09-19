@@ -9,6 +9,7 @@ import torch
 
 from agent_code.ppo_agent.model import (
     ACTIONS,
+    CRATE_DIST_IDX,
     STATE_SIZE,
     ActorCritic,
     action_mask_vector,
@@ -17,6 +18,7 @@ from agent_code.ppo_agent.model import (
 )
 from agent_code.ppo_agent.train import (
     _advantages_and_returns,
+    _potential,
     _restore_rollout,
     _serializable_rollout,
 )
@@ -110,3 +112,34 @@ def test_stage_variant_selects_a_separate_checkpoint_file():
         check=True,
     )
     assert result.stdout.strip() == "model_stage1_entropy02.pt"
+
+
+def test_absent_coin_does_not_erase_crate_distance_potential():
+    vector = np.zeros(STATE_SIZE, dtype=np.float32)
+    vector[CRATE_DIST_IDX] = 5.0
+    assert _potential(vector) == -5.0
+
+
+def test_stage_variant_can_initialize_from_a_different_prior_variant():
+    environment = os.environ.copy()
+    environment["PPO_STAGE"] = "2"
+    environment["PPO_VARIANT"] = "goalfix"
+    environment["PPO_INIT_VARIANT"] = "entropy02"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "from agent_code.ppo_agent.callbacks import "
+                "MODEL_FILE, PRIOR_MODEL_FILES; "
+                "print(MODEL_FILE.name, PRIOR_MODEL_FILES[0].name)"
+            ),
+        ],
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout.strip() == (
+        "model_stage2_goalfix.pt model_stage1_entropy02.pt"
+    )

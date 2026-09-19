@@ -39,6 +39,10 @@ def main():
         "--variant", default="",
         help="safe suffix for a separate checkpoint, e.g. entropy02",
     )
+    parser.add_argument(
+        "--init-variant", default=None,
+        help="earlier-stage variant to initialize from (defaults to --variant)",
+    )
     parser.add_argument("--entropy-coefficient", type=float, default=0.01)
     parser.add_argument(
         "--fresh", action="store_true",
@@ -52,6 +56,9 @@ def main():
         parser.error("at most three opponents are supported")
     if args.variant and not all(c.isalnum() or c in "_-" for c in args.variant):
         parser.error("--variant may contain only letters, digits, '_' and '-'")
+    init_variant = args.variant if args.init_variant is None else args.init_variant
+    if init_variant and not all(c.isalnum() or c in "_-" for c in init_variant):
+        parser.error("--init-variant may contain only letters, digits, '_' and '-'")
     if args.entropy_coefficient < 0:
         parser.error("--entropy-coefficient must be non-negative")
     scenario = args.scenario or DEFAULT_SCENARIOS[args.stage]
@@ -68,6 +75,7 @@ def main():
     env = os.environ.copy()
     env["PPO_STAGE"] = str(args.stage)
     env["PPO_VARIANT"] = args.variant
+    env["PPO_INIT_VARIANT"] = init_variant
     env["PPO_ENTROPY_COEFFICIENT"] = str(args.entropy_coefficient)
     rounds_by_seed = distribute(args.episodes, len(TRAIN_SEEDS))
     started = time.perf_counter()
@@ -118,6 +126,7 @@ def main():
         "training_seed_count": sum(rounds > 0 for rounds in rounds_by_seed),
         "fresh": args.fresh,
         "variant": args.variant,
+        "init_variant": init_variant,
         "entropy_coefficient": args.entropy_coefficient,
         "elapsed_seconds": round(time.perf_counter() - started, 2),
         "model_file": str(model_file.relative_to(REPO_ROOT)),
