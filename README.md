@@ -35,6 +35,12 @@ python main.py play
 2. `linear_q_agent`: approximate action-value learning with linear features and
    replay-based mini-batch updates.
 
+An additional `ppo_agent` branch tests on-policy actor-critic learning with the
+same 35-value representation and action shield as `dqn_agent`. See
+`PPO_EXPERIMENT_PLAN.md` for its equations, initial hyperparameters, curriculum,
+and completed compatibility checks, and `PPO_RESULTS.md` for the first
+validation measurements.
+
 The agents will be trained through the four project stages: coin collection,
 crate destruction and safe bombing, hunting non-aggressive opponents, and full
 competition. See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the experiment plan and
