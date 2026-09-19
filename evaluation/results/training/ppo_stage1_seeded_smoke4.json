@@ -1,0 +1,16 @@
+{
+  "tag": "ppo_stage1_seeded_smoke4",
+  "git_commit": "fb41008",
+  "agent": "ppo_agent",
+  "stage": 1,
+  "scenario": "coin-heaven",
+  "opponents": [],
+  "episodes": 4,
+  "training_seed_count": 4,
+  "fresh": true,
+  "elapsed_seconds": 6.62,
+  "model_file": "agent_code/ppo_agent/model_stage1.pt",
+  "total_steps": 1604,
+  "optimized_steps": 1024,
+  "stage_training_round": 4
+}

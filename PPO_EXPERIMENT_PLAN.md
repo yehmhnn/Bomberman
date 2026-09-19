@@ -47,18 +47,31 @@ learning rate and entropy only after the baseline learning curve is recorded.
 
 ## Curriculum
 
-Use the same task sequence as the other agents without using test seeds:
+Use the same task sequence as the other agents without using test seeds. The
+curriculum runner distributes episodes over `evaluation/seeds.py`'s fixed
+training seeds, explicitly seeds PPO's own sampling RNG, and writes a separate
+checkpoint for every project stage:
 
 ```bash
-python main.py play --agents ppo_agent --train 1 --scenario coin-heaven --no-gui --n-rounds 1000
-python main.py play --agents ppo_agent --train 1 --scenario loot-crate --no-gui --n-rounds 1000
-python main.py play --agents ppo_agent peaceful_agent --train 1 --scenario classic --no-gui --n-rounds 2000
-python main.py play --agents ppo_agent coin_collector_agent --train 1 --scenario classic --no-gui --n-rounds 2000
-python main.py play --agents ppo_agent rule_based_agent --train 1 --scenario classic --no-gui --n-rounds 4000
+python evaluation/train_ppo.py --tag ppo_s1_1000 --stage 1 --episodes 1000 --fresh
+python evaluation/train_ppo.py --tag ppo_s2_2000 --stage 2 --episodes 2000 --fresh
+python evaluation/train_ppo.py --tag ppo_s3_peaceful_2000 --stage 3 --episodes 2000 --opponents peaceful_agent --fresh
+python evaluation/train_ppo.py --tag ppo_s3_coin_2000 --stage 3 --episodes 2000 --opponents coin_collector_agent
+python evaluation/train_ppo.py --tag ppo_s4_rule_4000 --stage 4 --episodes 4000 --opponents rule_based_agent --fresh
 ```
 
 Checkpoint evaluation must use the unchanged shared protocol. Compare learning
 curves at equal environment interactions in addition to final tuned models.
+Set `PPO_STAGE=1`, `2`, `3`, or `4` when evaluating the corresponding
+`model_stageN.pt` checkpoint.
+
+Unfinished 1,024-transition rollouts are stored in the stage checkpoint. This
+matters because the runner starts a fresh game process for each board seed:
+without rollout persistence, every process boundary would silently discard
+valid on-policy transitions. A compact `model_stageN.diagnostics.csv` records
+policy/value loss, entropy, approximate KL, clipping fraction, explained
+variance, reward/return, event counts, and the six action frequencies after
+each PPO update.
 
 ## Verification completed
 
@@ -78,3 +91,7 @@ This is an exploratory curriculum checkpoint rather than a final candidate:
 the direct framework runs did not yet distribute training over the shared
 training-seed list. Validation still uses the unchanged shared seeds and
 benchmark harness. See `PPO_RESULTS.md` for the measured results.
+
+- A four-board shared-seed curriculum smoke run verified cross-process rollout
+  persistence: 1,604 transitions were observed, 1,024 were optimized in one
+  PPO update, and the remaining 580 were recovered from the safe checkpoint.

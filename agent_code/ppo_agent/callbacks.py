@@ -1,5 +1,6 @@
 """Inference and on-policy action sampling for PPO."""
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -15,22 +16,49 @@ from .model import (
 )
 from .shared.features import track_position
 
-MODEL_FILE = Path(__file__).with_name("model.pt")
+MODEL_STAGE = int(os.environ.get("PPO_STAGE", "0"))
+if MODEL_STAGE not in (0, 1, 2, 3, 4):
+    raise ValueError("PPO_STAGE must be unset/0 or one of 1, 2, 3, 4")
+
+MODEL_FILE = Path(__file__).with_name(
+    "model.pt" if MODEL_STAGE == 0 else f"model_stage{MODEL_STAGE}.pt"
+)
+PRIOR_MODEL_FILES = tuple(
+    Path(__file__).with_name(f"model_stage{stage}.pt")
+    for stage in range(MODEL_STAGE - 1, 0, -1)
+)
+
+
+def checkpoint_source():
+    """Selected checkpoint, falling back to the nearest earlier stage."""
+    for path in (MODEL_FILE, *PRIOR_MODEL_FILES):
+        if path.is_file():
+            return path
+    return None
 
 
 def load_checkpoint():
-    return torch.load(MODEL_FILE, map_location="cpu") if MODEL_FILE.is_file() else None
+    source = checkpoint_source()
+    if source is None:
+        return None
+    checkpoint = torch.load(source, map_location="cpu", weights_only=True)
+    checkpoint["_loaded_from"] = str(source)
+    checkpoint["_is_current_stage"] = source == MODEL_FILE
+    return checkpoint
 
 
 def setup(self):
     torch.set_num_threads(1)
+    self.ppo_seed = int(os.environ.get("PPO_AGENT_SEED", "0"))
+    torch.manual_seed(self.ppo_seed)
     self.device = torch.device("cpu")
     self.model = ActorCritic().to(self.device)
     checkpoint = load_checkpoint()
     if checkpoint is not None:
         self.model.load_state_dict(checkpoint["model_state"])
         self.logger.info(
-            "Loaded PPO checkpoint at round=%d step=%d",
+            "Loaded PPO checkpoint %s at round=%d step=%d",
+            checkpoint.get("_loaded_from", MODEL_FILE),
             checkpoint.get("training_round", 0),
             checkpoint.get("total_steps", 0),
         )
@@ -38,7 +66,7 @@ def setup(self):
         self.logger.info("No PPO checkpoint found; using fresh parameters")
 
     self.model.train(self.train)
-    self.rng = np.random.default_rng()
+    self.rng = np.random.default_rng(self.ppo_seed)
     self.recent_positions = new_recent_positions()
     self.last_state_vec = None
     self.last_action_index = None

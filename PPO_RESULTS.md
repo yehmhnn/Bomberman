@@ -36,3 +36,35 @@ finish the board efficiently. The next PPO experiment should keep the same
 architecture and first test more Stage-2 training plus a modest entropy or
 time-pressure adjustment; changing algorithms before diagnosing the learning
 curve would confound the comparison.
+
+## Reproducible Stage 1 rerun
+
+A new checkpoint was trained from scratch for 1,000 `coin-heaven` rounds,
+distributed evenly across all 200 shared training seeds. PPO's sampling RNG
+was explicitly tied to each board seed. The run observed and optimized 301,056
+transitions in 314 updates; no partial rollout was left at the checkpoint.
+
+Evaluation on all 100 validation seeds produced:
+
+| Metric | Mean | 95% CI |
+|---|---:|---:|
+| Score / coins | 35.64 | [33.55, 37.69] |
+| Survival | 100% | [100%, 100%] |
+| Suicide | 0% | [0%, 0%] |
+| Invalid actions | 0.00 | [0.00, 0.00] |
+
+This is below the earlier 20-seed exploratory estimate of 41.60, demonstrating
+why the complete shared validation set is needed. Training diagnostics explain
+part of the remaining gap: mean policy entropy fell from 1.243 nats over the
+first ten updates to 0.023 over the final ten. Bomb frequency fell from 7.80%
+to 0.03%, and WAIT frequency from 24.82% to 0.02%, so PPO learned the correct
+Stage-1 action types but became nearly deterministic before navigation was
+optimal. The next controlled experiment should address exploration rather than
+assuming that Stage 2 alone will repair navigation.
+
+The first evaluation attempt also exposed a framework timing bug: callback
+duration used the non-monotonic wall clock, so system suspend/clock adjustment
+created two false 15-minute-plus think times. After replacing duration timing
+with `perf_counter`, the complete 100-seed rerun reproduced every score while
+mean action time was 0.000392 seconds and the maximum per-game mean was
+0.000646 seconds.

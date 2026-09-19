@@ -1,3 +1,4 @@
+import io
 from types import SimpleNamespace
 
 import numpy as np
@@ -11,7 +12,11 @@ from agent_code.ppo_agent.model import (
     masked_distribution,
     state_to_vector,
 )
-from agent_code.ppo_agent.train import _advantages_and_returns
+from agent_code.ppo_agent.train import (
+    _advantages_and_returns,
+    _restore_rollout,
+    _serializable_rollout,
+)
 
 
 def game_state(position=(3, 3)):
@@ -62,3 +67,25 @@ def test_gae_stops_bootstrapping_at_terminal_transition():
     advantages, returns = _advantages_and_returns(rollout)
     assert np.isclose(advantages[1], 2.0)
     assert np.isclose(returns[1], 3.0)
+
+
+def test_unfinished_rollout_round_trips_through_safe_checkpoint_loader():
+    rollout = [{
+        "state": np.arange(STATE_SIZE, dtype=np.float32),
+        "action": 2,
+        "old_log_probability": -0.5,
+        "value": 1.25,
+        "next_value": 1.5,
+        "reward": 0.2,
+        "done": 0.0,
+        "mask": np.array([True, False, True, False, True, False]),
+        "events": ("MOVED_DOWN",),
+    }]
+    buffer = io.BytesIO()
+    torch.save({"rollout": _serializable_rollout(rollout)}, buffer)
+    buffer.seek(0)
+    loaded = torch.load(buffer, weights_only=True)
+    restored = _restore_rollout(loaded["rollout"])
+    np.testing.assert_array_equal(restored[0]["state"], rollout[0]["state"])
+    np.testing.assert_array_equal(restored[0]["mask"], rollout[0]["mask"])
+    assert restored[0]["events"] == rollout[0]["events"]
