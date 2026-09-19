@@ -1273,3 +1273,16 @@ ppo_s1_seeded_1000_val,coin-heaven,ppo_agent,100,win,1.000,1.000,1.000
 ppo_s1_seeded_1000_val,coin-heaven,ppo_agent,100,survived,1.000,1.000,1.000
 ppo_s1_seeded_1000_val,coin-heaven,ppo_agent,100,time,0.149,0.142,0.157
 ppo_s1_seeded_1000_val,coin-heaven,ppo_agent,100,think_time_mean,0.000,0.000,0.000
+ppo_s1_entropy02_1000_val,coin-heaven,ppo_agent,100,score,39.670,37.610,41.650
+ppo_s1_entropy02_1000_val,coin-heaven,ppo_agent,100,coins,39.670,37.610,41.650
+ppo_s1_entropy02_1000_val,coin-heaven,ppo_agent,100,kills,0.000,0.000,0.000
+ppo_s1_entropy02_1000_val,coin-heaven,ppo_agent,100,suicides,0.000,0.000,0.000
+ppo_s1_entropy02_1000_val,coin-heaven,ppo_agent,100,suicide,0.000,0.000,0.000
+ppo_s1_entropy02_1000_val,coin-heaven,ppo_agent,100,crates,0.000,0.000,0.000
+ppo_s1_entropy02_1000_val,coin-heaven,ppo_agent,100,invalid,0.000,0.000,0.000
+ppo_s1_entropy02_1000_val,coin-heaven,ppo_agent,100,alive_steps,343.710,321.088,365.940
+ppo_s1_entropy02_1000_val,coin-heaven,ppo_agent,100,rank,1.000,1.000,1.000
+ppo_s1_entropy02_1000_val,coin-heaven,ppo_agent,100,win,1.000,1.000,1.000
+ppo_s1_entropy02_1000_val,coin-heaven,ppo_agent,100,survived,1.000,1.000,1.000
+ppo_s1_entropy02_1000_val,coin-heaven,ppo_agent,100,time,0.135,0.125,0.145
+ppo_s1_entropy02_1000_val,coin-heaven,ppo_agent,100,think_time_mean,0.000,0.000,0.000

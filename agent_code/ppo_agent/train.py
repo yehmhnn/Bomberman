@@ -1,6 +1,7 @@
 """Clipped PPO with generalized advantage estimation (GAE)."""
 
 import csv
+import os
 from pathlib import Path
 
 import numpy as np
@@ -28,7 +29,9 @@ GAE_LAMBDA = 0.95
 LEARNING_RATE = 3e-4
 CLIP_EPSILON = 0.20
 VALUE_COEFFICIENT = 0.5
-ENTROPY_COEFFICIENT = 0.01
+ENTROPY_COEFFICIENT = float(os.environ.get("PPO_ENTROPY_COEFFICIENT", "0.01"))
+if ENTROPY_COEFFICIENT < 0:
+    raise ValueError("PPO_ENTROPY_COEFFICIENT must be non-negative")
 MAX_GRAD_NORM = 0.5
 ROLLOUT_SIZE = 1024
 UPDATE_EPOCHS = 4
@@ -293,6 +296,7 @@ def _write_diagnostic(
         "approximate_kl": float(np.mean(approximate_kls)),
         "clip_fraction": float(np.mean(clip_fractions)),
         "explained_variance": explained_variance,
+        "entropy_coefficient": ENTROPY_COEFFICIENT,
         "coins": all_events.count(e.COIN_COLLECTED),
         "crates": all_events.count(e.CRATE_DESTROYED),
         "self_kills": all_events.count(e.KILLED_SELF),
@@ -317,6 +321,7 @@ def save_model(self):
         "update_count": self.update_count,
         "optimized_steps": self.optimized_steps,
         "rollout": _serializable_rollout(self.rollout),
+        "entropy_coefficient": ENTROPY_COEFFICIENT,
     }
     temporary = Path(str(MODEL_FILE) + ".tmp")
     torch.save(checkpoint, temporary)

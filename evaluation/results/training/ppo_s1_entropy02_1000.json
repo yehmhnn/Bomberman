@@ -1,0 +1,18 @@
+{
+  "tag": "ppo_s1_entropy02_1000",
+  "git_commit": "657fdd4",
+  "agent": "ppo_agent",
+  "stage": 1,
+  "scenario": "coin-heaven",
+  "opponents": [],
+  "episodes": 1000,
+  "training_seed_count": 200,
+  "fresh": true,
+  "variant": "entropy02",
+  "entropy_coefficient": 0.02,
+  "elapsed_seconds": 538.14,
+  "model_file": "agent_code/ppo_agent/model_stage1_entropy02.pt",
+  "total_steps": 263677,
+  "optimized_steps": 263677,
+  "stage_training_round": 1000
+}

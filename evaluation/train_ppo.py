@@ -36,6 +36,11 @@ def main():
     parser.add_argument("--scenario", default=None)
     parser.add_argument("--opponents", nargs="*", default=[])
     parser.add_argument(
+        "--variant", default="",
+        help="safe suffix for a separate checkpoint, e.g. entropy02",
+    )
+    parser.add_argument("--entropy-coefficient", type=float, default=0.01)
+    parser.add_argument(
         "--fresh", action="store_true",
         help="remove only this stage's checkpoint and diagnostics before training",
     )
@@ -45,11 +50,16 @@ def main():
         parser.error("--episodes must be positive")
     if len(args.opponents) > 3:
         parser.error("at most three opponents are supported")
+    if args.variant and not all(c.isalnum() or c in "_-" for c in args.variant):
+        parser.error("--variant may contain only letters, digits, '_' and '-'")
+    if args.entropy_coefficient < 0:
+        parser.error("--entropy-coefficient must be non-negative")
     scenario = args.scenario or DEFAULT_SCENARIOS[args.stage]
 
     agent_dir = REPO_ROOT / "agent_code" / "ppo_agent"
-    model_file = agent_dir / f"model_stage{args.stage}.pt"
-    diagnostics_file = agent_dir / f"model_stage{args.stage}.diagnostics.csv"
+    suffix = f"_{args.variant}" if args.variant else ""
+    model_file = agent_dir / f"model_stage{args.stage}{suffix}.pt"
+    diagnostics_file = agent_dir / f"model_stage{args.stage}{suffix}.diagnostics.csv"
     if args.fresh:
         for path in (model_file, diagnostics_file):
             if path.exists():
@@ -57,6 +67,8 @@ def main():
 
     env = os.environ.copy()
     env["PPO_STAGE"] = str(args.stage)
+    env["PPO_VARIANT"] = args.variant
+    env["PPO_ENTROPY_COEFFICIENT"] = str(args.entropy_coefficient)
     rounds_by_seed = distribute(args.episodes, len(TRAIN_SEEDS))
     started = time.perf_counter()
     completed = 0
@@ -105,6 +117,8 @@ def main():
         "episodes": args.episodes,
         "training_seed_count": sum(rounds > 0 for rounds in rounds_by_seed),
         "fresh": args.fresh,
+        "variant": args.variant,
+        "entropy_coefficient": args.entropy_coefficient,
         "elapsed_seconds": round(time.perf_counter() - started, 2),
         "model_file": str(model_file.relative_to(REPO_ROOT)),
         "total_steps": None if checkpoint is None else checkpoint.get("total_steps"),

@@ -65,6 +65,11 @@ curves at equal environment interactions in addition to final tuned models.
 Set `PPO_STAGE=1`, `2`, `3`, or `4` when evaluating the corresponding
 `model_stageN.pt` checkpoint.
 
+Controlled ablations use `--variant` so they cannot overwrite the baseline.
+For example, the entropy candidate is trained with
+`--variant entropy02 --entropy-coefficient 0.02` and evaluated with both
+`PPO_STAGE=1` and `PPO_VARIANT=entropy02` set.
+
 Unfinished 1,024-transition rollouts are stored in the stage checkpoint. This
 matters because the runner starts a fresh game process for each board seed:
 without rollout persistence, every process boundary would silently discard

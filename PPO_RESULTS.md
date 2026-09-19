@@ -68,3 +68,29 @@ created two false 15-minute-plus think times. After replacing duration timing
 with `perf_counter`, the complete 100-seed rerun reproduced every score while
 mean action time was 0.000392 seconds and the maximum per-game mean was
 0.000646 seconds.
+
+## Stage 1 entropy ablation
+
+The first controlled ablation changed only the entropy coefficient from 0.01
+to 0.02. It was trained from scratch for the same 1,000 rounds over the same
+200 training seeds, producing 263,677 optimized transitions in 278 updates.
+Evaluation used the same 100 validation boards as the baseline:
+
+| Entropy coefficient | Score / coins (95% CI) | Survival | Suicide |
+|---:|---:|---:|---:|
+| 0.01 | 35.64 [33.55, 37.69] | 100% | 0% |
+| 0.02 | 39.67 [37.61, 41.65] | 100% | 0% |
+
+Because the validation boards were paired, the most informative estimate is
+the per-seed score difference: the 0.02 model gained 4.03 coins per game, with
+a 95% paired bootstrap interval of [2.21, 5.98]. It scored higher on 37 boards,
+tied on 55, and scored lower on 8. This is evidence that the improvement is not
+just a different sample of boards.
+
+The higher coefficient slowed but did not prevent policy collapse: mean
+entropy over the last ten updates was 0.060 nats, compared with 0.023 for the
+baseline. It also finished games sooner on average (343.71 versus 380.36
+steps), with zero invalid actions and a mean action time of 0.000393 seconds.
+The 0.02 checkpoint is therefore the preferred Stage-1 initialization for the
+next curriculum experiment; further entropy tuning should remain a separate
+ablation rather than changing the shared evaluation protocol.

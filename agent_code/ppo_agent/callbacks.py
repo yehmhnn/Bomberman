@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+import re
 
 import numpy as np
 import torch
@@ -19,12 +20,17 @@ from .shared.features import track_position
 MODEL_STAGE = int(os.environ.get("PPO_STAGE", "0"))
 if MODEL_STAGE not in (0, 1, 2, 3, 4):
     raise ValueError("PPO_STAGE must be unset/0 or one of 1, 2, 3, 4")
+MODEL_VARIANT = os.environ.get("PPO_VARIANT", "").strip()
+if MODEL_VARIANT and re.fullmatch(r"[A-Za-z0-9_-]+", MODEL_VARIANT) is None:
+    raise ValueError("PPO_VARIANT may contain only letters, digits, '_' and '-'")
+VARIANT_SUFFIX = f"_{MODEL_VARIANT}" if MODEL_VARIANT else ""
 
 MODEL_FILE = Path(__file__).with_name(
-    "model.pt" if MODEL_STAGE == 0 else f"model_stage{MODEL_STAGE}.pt"
+    f"model{VARIANT_SUFFIX}.pt"
+    if MODEL_STAGE == 0 else f"model_stage{MODEL_STAGE}{VARIANT_SUFFIX}.pt"
 )
 PRIOR_MODEL_FILES = tuple(
-    Path(__file__).with_name(f"model_stage{stage}.pt")
+    Path(__file__).with_name(f"model_stage{stage}{VARIANT_SUFFIX}.pt")
     for stage in range(MODEL_STAGE - 1, 0, -1)
 )
 

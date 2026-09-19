@@ -1,4 +1,7 @@
 import io
+import os
+import subprocess
+import sys
 from types import SimpleNamespace
 
 import numpy as np
@@ -89,3 +92,21 @@ def test_unfinished_rollout_round_trips_through_safe_checkpoint_loader():
     np.testing.assert_array_equal(restored[0]["state"], rollout[0]["state"])
     np.testing.assert_array_equal(restored[0]["mask"], rollout[0]["mask"])
     assert restored[0]["events"] == rollout[0]["events"]
+
+
+def test_stage_variant_selects_a_separate_checkpoint_file():
+    environment = os.environ.copy()
+    environment["PPO_STAGE"] = "1"
+    environment["PPO_VARIANT"] = "entropy02"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from agent_code.ppo_agent.callbacks import MODEL_FILE; print(MODEL_FILE.name)",
+        ],
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout.strip() == "model_stage1_entropy02.pt"
