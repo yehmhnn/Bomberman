@@ -123,7 +123,11 @@ def action_mask_vector(game_state):
     return np.array([mask[a] for a in ACTIONS], dtype=bool)
 
 
-N_QUANTILES = 32
+N_QUANTILES = 64  # hparam pass, run F: was 32. Finer distributional resolution
+# might sharpen the "reliably good vs occasionally fatal" distinction QR-DQN
+# is meant to capture. Resizes value_head/advantage_head, so unlike every
+# other hparam-pass run this can't warm-start from the stage11 checkpoint --
+# needs a full fresh retrain (solo classic, then the standard mixed4 stage).
 
 
 class DuelingQNetwork(nn.Module):
