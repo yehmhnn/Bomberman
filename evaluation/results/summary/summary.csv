@@ -1299,3 +1299,16 @@ ppo_s2_entropy02_2000_val,loot-crate,ppo_agent,100,win,1.000,1.000,1.000
 ppo_s2_entropy02_2000_val,loot-crate,ppo_agent,100,survived,1.000,1.000,1.000
 ppo_s2_entropy02_2000_val,loot-crate,ppo_agent,100,time,0.110,0.107,0.114
 ppo_s2_entropy02_2000_val,loot-crate,ppo_agent,100,think_time_mean,0.000,0.000,0.000
+ppo_s2_goalfix_2000_val,loot-crate,ppo_agent,100,score,8.280,6.590,10.030
+ppo_s2_goalfix_2000_val,loot-crate,ppo_agent,100,coins,8.280,6.590,10.030
+ppo_s2_goalfix_2000_val,loot-crate,ppo_agent,100,kills,0.000,0.000,0.000
+ppo_s2_goalfix_2000_val,loot-crate,ppo_agent,100,suicides,0.000,0.000,0.000
+ppo_s2_goalfix_2000_val,loot-crate,ppo_agent,100,suicide,0.000,0.000,0.000
+ppo_s2_goalfix_2000_val,loot-crate,ppo_agent,100,crates,23.260,19.000,27.881
+ppo_s2_goalfix_2000_val,loot-crate,ppo_agent,100,invalid,0.000,0.000,0.000
+ppo_s2_goalfix_2000_val,loot-crate,ppo_agent,100,alive_steps,400.000,400.000,400.000
+ppo_s2_goalfix_2000_val,loot-crate,ppo_agent,100,rank,1.000,1.000,1.000
+ppo_s2_goalfix_2000_val,loot-crate,ppo_agent,100,win,1.000,1.000,1.000
+ppo_s2_goalfix_2000_val,loot-crate,ppo_agent,100,survived,1.000,1.000,1.000
+ppo_s2_goalfix_2000_val,loot-crate,ppo_agent,100,time,0.133,0.129,0.137
+ppo_s2_goalfix_2000_val,loot-crate,ppo_agent,100,think_time_mean,0.000,0.000,0.000

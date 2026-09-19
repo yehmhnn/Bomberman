@@ -126,3 +126,30 @@ an entropy schedule—then repeat the unchanged 100-seed validation. The older
 exploratory Stage-2 checkpoint scored higher, but it was trained through a
 different, unseeded history and therefore is evidence for possible headroom,
 not a directly controlled comparison.
+
+## Stage 2 goal-potential correction
+
+Inspection exposed a reward-shaping error. Missing coin and crate targets are
+encoded as distance zero, but the original potential used the minimum of both
+encoded distances. Consequently, a missing coin erased the crate-distance
+signal (`min(0, crate_distance) = 0`), and a missing crate similarly erased the
+coin-distance signal. The corrected potential takes the minimum only over
+positive, present-target distances.
+
+A separate `goalfix` checkpoint was initialized from exactly the same
+entropy-0.02 Stage-1 model and trained for the same 2,000 rounds over the same
+200 training seeds. On the same 100 validation boards:
+
+| Metric | Original Stage 2 | Goal fix | Paired change (95% CI) |
+|---|---:|---:|---:|
+| Score / coins | 5.49 | 8.28 | +2.79 [+0.53, +5.10] |
+| Crates destroyed | 16.44 | 23.26 | +6.82 [+0.60, +13.18] |
+| Survival | 100% | 100% | 0 pp |
+| Suicide | 0% | 0% | 0 pp |
+| Invalid actions | 0.00 | 0.00 | 0.00 |
+
+The correction therefore improved both task outcomes without sacrificing
+safety. It is still not sufficient to complete Stage 2: every validation game
+reached 400 steps. This model is a better Stage-2 candidate, but further
+training or an additional efficiency intervention should be measured before it
+is used as the foundation for opponent hunting.
