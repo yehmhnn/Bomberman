@@ -173,3 +173,28 @@ Higher exploration produced a large improvement without weakening safety, so
 the entropy-0.05 checkpoint is the preferred Stage-2 model for Stage 3. All
 games still reached the 400-step limit, meaning complete board clearance
 remains an efficiency limitation rather than a safety limitation.
+
+## Stage 3 peaceful-opponent baseline
+
+The preferred Stage-2 checkpoint was continued for 2,000 `classic` rounds
+against `peaceful_agent`, evenly distributed over the 200 training seeds. On
+the 100 validation boards PPO achieved:
+
+| Metric | Mean / rate |
+|---|---:|
+| Score | 1.56 |
+| Coins | 1.11 |
+| Opponent kills | 0.09 |
+| Games with a kill | 9 / 100 |
+| Win rate | 34% |
+| Mean rank | 1.33 |
+| Survival | 100% |
+| Suicide / invalid actions | 0% / 0.00 |
+
+This is safe but not a successful hunting policy. Inspection explains the
+failure: the state includes opponent direction and distance, but the dense
+potential reward includes only coin/crate distance. PPO is therefore rewarded
+for resource navigation while opponent reward remains sparse until a bomb is
+already able to hit or trap the target. The next controlled Stage-3 variant
+should add opponent-distance potential without changing the safety mask or
+shared validation protocol.
