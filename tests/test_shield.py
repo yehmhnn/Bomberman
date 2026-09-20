@@ -6,7 +6,7 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from agent_code.dqn_agent.model import action_mask_vector, shield_mask  # noqa: E402
+from agent_code.dqn_agent.model import _augment_with_opponent_threats, action_mask_vector, shield_mask  # noqa: E402
 from shared.safety import safe_action_mask  # noqa: E402
 
 WALL = -1
@@ -133,3 +133,39 @@ def test_shield_does_not_restrict_movement_near_an_unarmed_opponent():
     state = make_state(field, (7, 8), others=[("unarmed", 0, False, (8, 8))])
     strong = shield_mask(state)
     assert strong["WAIT"] is True
+
+
+def test_augment_treats_opponent_neighbors_as_potentially_occupied():
+    # shared.safety._occupied/escape_exists only ever see an opponent's
+    # *current* tile, fixed for the whole multi-step BFS -- they have no way
+    # to know the opponent could walk into a tile our escape plan is
+    # counting on being free one step from now. The augmentation should add
+    # a phantom occupant at each of the opponent's neighboring tiles (shaped
+    # like a real (name, score, bombs_left, pos) tuple, so the existing
+    # shared.safety._occupied picks it up for free) so escape-route planning
+    # accounts for that risk. Applies even to an unarmed opponent, since
+    # walking into our path doesn't require a bomb.
+    field = bordered_field()
+    state = make_state(field, (8, 8), others=[("unarmed", 0, False, (10, 10))])
+
+    augmented = _augment_with_opponent_threats(state)
+    phantom_positions = {pos for (name, _, _, pos) in augmented["others"] if name == "__phantom__"}
+
+    assert phantom_positions == {(9, 10), (11, 10), (10, 9), (10, 11)}
+    # the opponent's own tile must still be present, untouched
+    assert ("unarmed", 0, False, (10, 10)) in augmented["others"]
+
+
+def test_augment_clips_opponent_neighbors_to_the_board():
+    # An opponent hugging the border must not generate a phantom tile
+    # outside the field array -- that would crash the very next
+    # field[pos]/danger.get(pos) lookup.
+    field = bordered_field()
+    state = make_state(field, (8, 8), others=[("unarmed", 0, False, (1, 1))])
+
+    augmented = _augment_with_opponent_threats(state)
+    phantom_positions = {pos for (name, _, _, pos) in augmented["others"] if name == "__phantom__"}
+
+    width, height = field.shape
+    assert all(0 <= x < width and 0 <= y < height for x, y in phantom_positions)
+    assert phantom_positions == {(0, 1), (2, 1), (1, 0), (1, 2)}
