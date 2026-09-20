@@ -153,3 +153,23 @@ safety. It is still not sufficient to complete Stage 2: every validation game
 reached 400 steps. This model is a better Stage-2 candidate, but further
 training or an additional efficiency intervention should be measured before it
 is used as the foundation for opponent hunting.
+
+## Stage 2 entropy-0.05 ablation
+
+The corrected goal potential was retained while the entropy coefficient alone
+was raised from 0.02 to 0.05. The new checkpoint used the same Stage-1
+initialization, 2,000-round budget, 200 training seeds, and 100 validation
+boards. Final-ten-update entropy increased from 0.097 to 0.248 nats.
+
+| Metric | Goal fix, entropy 0.02 | Goal fix, entropy 0.05 | Paired change (95% CI) |
+|---|---:|---:|---:|
+| Score / coins | 8.28 | 23.39 | +15.11 [+11.30, +18.76] |
+| Crates destroyed | 23.26 | 59.97 | +36.71 [+27.36, +45.87] |
+| Survival | 100% | 100% | 0 pp |
+| Suicide | 0% | 0% | 0 pp |
+| Invalid actions | 0.00 | 0.00 | 0.00 |
+
+Higher exploration produced a large improvement without weakening safety, so
+the entropy-0.05 checkpoint is the preferred Stage-2 model for Stage 3. All
+games still reached the 400-step limit, meaning complete board clearance
+remains an efficiency limitation rather than a safety limitation.
