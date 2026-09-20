@@ -218,3 +218,29 @@ The variant killed the opponent in 41 games, up from 9, while scoring higher
 on 76 boards. It incurred one suicide and one invalid action, so its safety is
 slightly below the baseline but still high. This checkpoint is the preferred
 starting point for the harder `coin_collector_agent` phase of Stage 3.
+
+## Stage 3 coin-collector continuation
+
+The hunting checkpoint was continued for 2,000 additional rounds against
+`coin_collector_agent`, reaching 4,000 Stage-3 rounds in total. Evaluation on
+the 100 validation boards produced:
+
+| Metric | PPO | Coin collector |
+|---|---:|---:|
+| Score | 4.68 | 4.03 |
+| Opponent kills | 0.15 | 0.04 |
+| Win rate | 61% | 35% |
+| Mean rank | 1.37 | 1.63 |
+| Survival | 76% | 51% |
+| Suicide | 21% | 34% |
+
+PPO therefore beats the harder opponent on score, kills, wins, rank, and
+survival, but its 21% suicide rate is too high for promotion to Stage 4.
+Training diagnostics agree: the continuation recorded 271 kills, 551 deaths,
+and 522 self-kills across 2,000 rounds.
+
+Re-evaluation against `peaceful_agent` after the continuation found partial
+forgetting. Kill rate fell from 0.41 to 0.22 (paired change -0.19, 95% CI
+[-0.32, -0.05]) and score from 6.69 to 4.61, although win rate stayed nearly
+unchanged at 86% and survival at 99%. The next intervention should address
+temporal bomb escape and curriculum retention before full Stage-4 opponents.
