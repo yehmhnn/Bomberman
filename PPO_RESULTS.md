@@ -198,3 +198,23 @@ for resource navigation while opponent reward remains sparse until a bomb is
 already able to hit or trap the target. The next controlled Stage-3 variant
 should add opponent-distance potential without changing the safety mask or
 shared validation protocol.
+
+## Stage 3 opponent-distance correction
+
+A separate hunting variant added negative nearest-opponent distance to the
+potential in Stages 3–4 only. It used the same Stage-2 initialization,
+entropy coefficient, 2,000 training rounds, and shared seeds as the baseline.
+On the same 100 validation boards against `peaceful_agent`:
+
+| Metric | Baseline | Hunting potential | Paired change (95% CI) |
+|---|---:|---:|---:|
+| Score | 1.56 | 6.69 | +5.13 [+4.07, +6.17] |
+| Opponent kills | 0.09 | 0.41 | +0.32 [+0.20, +0.43] |
+| Win rate | 34% | 85% | +51 pp [+40, +62] |
+| Mean rank | 1.33 | 1.075 | -0.255 [-0.310, -0.200] |
+| Survival | 100% | 99% | -1 pp [-3, 0] |
+
+The variant killed the opponent in 41 games, up from 9, while scoring higher
+on 76 boards. It incurred one suicide and one invalid action, so its safety is
+slightly below the baseline but still high. This checkpoint is the preferred
+starting point for the harder `coin_collector_agent` phase of Stage 3.
