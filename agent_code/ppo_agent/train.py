@@ -10,13 +10,14 @@ from torch import optim
 
 import events as e
 
-from .callbacks import MODEL_FILE, load_checkpoint
+from .callbacks import MODEL_FILE, MODEL_STAGE, load_checkpoint
 from .model import (
     ACTIONS,
     BOMB_HITS_OPPONENT_IDX,
     COIN_DIST_IDX,
     CRATE_DIST_IDX,
     IN_DANGER_IDX,
+    OPPONENT_DIST_IDX,
     OPPONENT_TRAPPED_IDX,
     STATE_SIZE,
     action_mask_vector,
@@ -80,7 +81,7 @@ def setup_training(self):
         self.optimized_steps = 0
 
 
-def _potential(vector):
+def _potential(vector, stage=MODEL_STAGE):
     if vector is None:
         return 0.0
     # The feature representation uses zero both when a target is absent and
@@ -92,8 +93,10 @@ def _potential(vector):
         if vector[index] > 0
     ]
     goal = -min(distances) if distances else 0.0
+    opponent_distance = float(vector[OPPONENT_DIST_IDX])
+    hunt = -opponent_distance if stage >= 3 and opponent_distance > 0 else 0.0
     danger = -2.0 if vector[IN_DANGER_IDX] > 0 else 0.0
-    return float(goal + danger)
+    return float(goal + hunt + danger)
 
 
 def _reward(old_vector, new_vector, events, action):
@@ -307,7 +310,9 @@ def _write_diagnostic(
         "entropy_coefficient": ENTROPY_COEFFICIENT,
         "coins": all_events.count(e.COIN_COLLECTED),
         "crates": all_events.count(e.CRATE_DESTROYED),
+        "kills": all_events.count(e.KILLED_OPPONENT),
         "self_kills": all_events.count(e.KILLED_SELF),
+        "deaths": all_events.count(e.GOT_KILLED),
     }
     row.update({f"action_{action.lower()}": float(actions[index])
                 for index, action in enumerate(ACTIONS)})

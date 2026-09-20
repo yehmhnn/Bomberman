@@ -76,6 +76,12 @@ uses `--variant goalfix --init-variant entropy02`: it writes
 `model_stage2_goalfix.pt` while initializing from
 `model_stage1_entropy02.pt`.
 
+Stages 3 and 4 add negative distance to the nearest living opponent to the
+potential. This supplies dense approach feedback through
+`gamma * Phi(next_state) - Phi(state)` while leaving the Stage-1/2 resource
+potential unchanged. Kill and death counts are recorded in update diagnostics
+for the hunting curriculum.
+
 Unfinished 1,024-transition rollouts are stored in the stage checkpoint. This
 matters because the runner starts a fresh game process for each board seed:
 without rollout persistence, every process boundary would silently discard

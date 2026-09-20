@@ -10,6 +10,7 @@ import torch
 from agent_code.ppo_agent.model import (
     ACTIONS,
     CRATE_DIST_IDX,
+    OPPONENT_DIST_IDX,
     STATE_SIZE,
     ActorCritic,
     action_mask_vector,
@@ -118,6 +119,14 @@ def test_absent_coin_does_not_erase_crate_distance_potential():
     vector = np.zeros(STATE_SIZE, dtype=np.float32)
     vector[CRATE_DIST_IDX] = 5.0
     assert _potential(vector) == -5.0
+
+
+def test_opponent_distance_potential_is_enabled_only_for_hunting_stages():
+    vector = np.zeros(STATE_SIZE, dtype=np.float32)
+    vector[OPPONENT_DIST_IDX] = 4.0
+    assert _potential(vector, stage=2) == 0.0
+    assert _potential(vector, stage=3) == -4.0
+    assert _potential(vector, stage=4) == -4.0
 
 
 def test_stage_variant_can_initialize_from_a_different_prior_variant():
