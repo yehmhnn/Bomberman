@@ -57,7 +57,8 @@ Exit criterion: reliably collect coins faster than random on held-out seeds.
 ### 2. Bombing, crates, and survival
 
 - Add an exact blast-time/danger map that respects walls, crates, bomb timers,
-  and chain reactions.
+  and overlapping blast zones. Bombs do not trigger chain reactions in this
+  framework; each bomb follows its own countdown.
 - Add features for escape feasibility, useful bomb placement, and nearby crates.
 - Use a curriculum from simple layouts to `classic` and potential-based shaping
   for progress without changing the intended optimum.

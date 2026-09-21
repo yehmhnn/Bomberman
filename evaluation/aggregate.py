@@ -58,9 +58,21 @@ def main():
 
     SUMMARY_DIR.mkdir(parents=True, exist_ok=True)
     out = SUMMARY_DIR / "summary.csv"
+
+    # A --tags run only recomputes those tags. Keep every other tag's rows
+    # already in the file so a scoped run never wipes out teammates' results.
+    computed_tags = {tag for (tag, _scenario, _code) in groups}
+    kept_rows = []
+    if out.exists():
+        with open(str(out), newline="", encoding="utf-8") as fh:
+            kept_rows = [r for r in csv.DictReader(fh) if r["tag"] not in computed_tags]
+
     with open(str(out), "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(["tag", "scenario", "agent_code", "n_matches", "metric", "mean", "ci_lo", "ci_hi"])
+        for r in kept_rows:
+            w.writerow([r["tag"], r["scenario"], r["agent_code"], r["n_matches"],
+                        r["metric"], r["mean"], r["ci_lo"], r["ci_hi"]])
         for (tag, scenario, code), md in sorted(groups.items()):
             n = len(md["score"])
             for m in METRICS:

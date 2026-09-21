@@ -35,10 +35,67 @@ python main.py play
 2. `linear_q_agent`: approximate action-value learning with linear features and
    replay-based mini-batch updates.
 
+An additional `ppo_agent` branch tests on-policy actor-critic learning with the
+same 35-value representation and action shield as `dqn_agent`. See
+`PPO_EXPERIMENT_PLAN.md` for its equations, initial hyperparameters, curriculum,
+and completed compatibility checks, and `PPO_RESULTS.md` for the first
+validation measurements.
+
 The agents will be trained through the four project stages: coin collection,
 crate destruction and safe bombing, hunting non-aggressive opponents, and full
 competition. See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the experiment plan and
 success criteria.
+
+## First training run
+
+The initial `tabular_q_agent` intentionally handles only navigation and visible
+coins. Train it on the first curriculum stage with:
+
+```bash
+python main.py play --agents tabular_q_agent --train 1 \
+  --scenario coin-heaven --no-gui --n-rounds 1000
+```
+
+Its table is saved as `agent_code/tabular_q_agent/q_table.pkl` after every round,
+so interrupted training can resume from the latest completed episode.
+Bombs remain disabled until safe-bomb and danger-map features are implemented.
+
+To train Q-learning and SARSA from scratch and evaluate them on the same held-out
+seeds:
+
+```bash
+scripts/run_stage1_experiment.sh --fresh 1000 100
+```
+
+The positional numbers are training rounds per agent and evaluation rounds per
+held-out seed. `--fresh` explicitly removes previous Stage-1 tables first; omit
+it to continue training existing tables.
+
+The two agents deliberately share their state and reward representation. Their
+controlled difference is the TD target: Q-learning uses the largest next-state
+value, while SARSA uses the value of the next action sampled from its current
+epsilon-greedy policy.
+
+## Stage 2: crates and safe bombing
+
+Stage 2 uses the verified functions in `shared/` to represent blast timing,
+safe actions, coin/crate targets, and whether a bomb can be escaped. It stores
+its tables separately as `q_table_stage2.pkl`, so training cannot overwrite the
+Stage 1 models. Start the crate curriculum with:
+
+```bash
+python main.py play --agents tabular_q_agent --train 1 \
+  --scenario loot-crate --no-gui --n-rounds 2000
+python main.py play --agents tabular_sarsa_agent --train 1 \
+  --scenario loot-crate --no-gui --n-rounds 2000
+```
+
+Then continue each saved table on the full board by changing the scenario to
+`classic`. During evaluation, omit `--train 1`; this sets exploration to zero
+and applies the same safety mask to the greedy policy.
+
+The completed experiment and failure analysis are recorded in
+[STAGE2_RESULTS.md](STAGE2_RESULTS.md).
 
 ## Reproducibility
 
