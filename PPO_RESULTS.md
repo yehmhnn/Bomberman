@@ -244,3 +244,45 @@ forgetting. Kill rate fell from 0.41 to 0.22 (paired change -0.19, 95% CI
 [-0.32, -0.05]) and score from 6.69 to 4.61, although win rate stayed nearly
 unchanged at 86% and survival at 99%. The next intervention should address
 temporal bomb escape and curriculum retention before full Stage-4 opponents.
+
+## Stage 4 rule-based continuation and common line-ups
+
+The Stage-3 hunting checkpoint was continued for 4,000 Stage-4 rounds against
+one `rule_based_agent`, evenly distributed over the 200 shared training seeds.
+The run used entropy coefficient 0.05 and reached 3,850,589 optimized
+environment steps. We then froze the checkpoint and evaluated it on all four
+common validation line-ups, using all 100 validation seeds for each line-up.
+
+| Validation line-up | Score | Kills | Win rate | Mean rank | Survival | Suicide |
+|---|---:|---:|---:|---:|---:|---:|
+| 3x rule-based | 4.45 | 0.44 | 38% | 2.16 | 61% | 35% |
+| rule-based + coin collector + peaceful | 5.91 | 0.70 | 43% | 1.78 | 80% | 19% |
+| 3x coin collector | 3.77 | 0.36 | 37% | 2.25 | 75% | 23% |
+| rule-based + 2x frozen DQN | 2.43 | 0.13 | 17% | 2.46 | 66% | 24% |
+
+PPO had the highest mean score in the first three line-ups. Against three
+rule-based agents, its 4.45 score (95% CI [3.76, 5.15]) exceeded their
+per-agent mean of 2.78 [2.55, 3.02], and PPO also had higher survival (61%
+versus 24%). In the mixed line-up it scored 5.91 [5.14, 6.67], killed 0.70
+opponents per game, and won 43% of games. In the DQN line-up, PPO's score of
+2.43 [2.01, 2.89] was close to the two DQN agents' per-agent mean of 2.50
+[2.19, 2.83]; the overlapping intervals do not support claiming that either
+one is better there.
+
+Applying the predeclared model-selection formula to PPO, averaged across the
+four line-ups, gives approximately 0.60: mean score 4.14 divided by 5, mean
+win rate 0.338, mean survival 0.705, mean kills 0.408, full reliability credit,
+and the fixed 0.05 penalty because suicide exceeds 10% in every line-up. This
+is much stronger than the documented Linear-Q score of about 0.11 under the
+same rule.
+
+The main unresolved weakness is safety. PPO self-killed in 19% to 35% of
+games, so it fails the protocol's desired 10% threshold despite outperforming
+most opponents on score. We therefore keep this as the completed Stage-4 PPO
+candidate and report the suicide rate explicitly rather than describing the
+policy as solved. No test seeds were used for training, tuning, or this model
+selection decision. After validation, the frozen Stage-4 checkpoint was copied
+to `agent_code/ppo_agent/model.pt`, the filename loaded by the tournament when
+no development-only stage variables are set. That default model passed the
+single-directory isolation regression test and a headless four-agent smoke
+match.
