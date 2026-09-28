@@ -24,18 +24,26 @@ from .model import (
 from .replay import PrioritizedReplayBuffer
 from .symmetry import augment_transition
 
-GAMMA = 0.95
-N_STEP = 3
-LEARNING_RATE = 3e-5  # was 1e-4; testing whether a lower LR avoids the repeated
-# "more training on the same lineup makes things worse" pattern (stage5->5v2,
-# stage12->13) -- a classic signature of a learning rate too high for stable
-# fine-tuning once the policy is already decent, even if it was fine (or
-# necessary for fast early progress) earlier in training from scratch.
+GAMMA = 0.95  # run A (0.99) was a clean regression -- back to stage12's value.
+N_STEP = 5  # hparam pass, run B: was 3. Testing whether propagating reward
+# signal 5 steps instead of 3 speeds up credit assignment for delayed outcomes
+# (bomb placed now, crate/kill confirmed a few steps later) without run A's
+# failure mode, since this only changes the bootstrap horizon of each update,
+# not the discount applied to the value function itself.
+LEARNING_RATE = 1e-4  # stage15 tested 3e-5 to fight the "more training on the
+# same lineup makes things worse" pattern (stage5->5v2, stage12->13); it helped
+# but didn't beat stage12 either, so not adopted -- back to the stage12 recipe.
 BATCH_SIZE = 128
 REPLAY_CAPACITY = 100_000
 MIN_REPLAY_BEFORE_TRAINING = 1_000
 TRAIN_EVERY_STEPS = 4
-TARGET_SYNC_EVERY_STEPS = 2_000
+TARGET_SYNC_EVERY_STEPS = 1_000  # hparam pass, run C: was 2000. Testing
+# whether syncing the target network twice as often helps the bootstrapped
+# quantile targets track the online network's (now 5-step) updates more
+# closely, at the usual stability-vs-tracking-speed tradeoff Double DQN's
+# target network exists to manage. Built on top of run B (N_STEP=5), our
+# current best, not stage12's original recipe -- coordinate-ascent style,
+# one variable at a time from the best point found so far.
 GRAD_CLIP_NORM = 10.0
 
 EPSILON_START = 1.0

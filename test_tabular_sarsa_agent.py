@@ -1,4 +1,4 @@
-"""Focused tests for the Stage-1 SARSA update."""
+"""Focused tests for the Stage-2 SARSA update."""
 
 from types import SimpleNamespace
 import unittest
