@@ -57,20 +57,44 @@ def state_to_vector(game_state, recent_positions=None):
 
 def _augment_with_opponent_threats(game_state):
     """game_state with each armed opponent's current tile added as a
-    hypothetical bomb (same BOMB_TIMER convention used for our own
-    about-to-be-placed bomb -- see shared.safety._can_escape_own_bomb).
+    hypothetical bomb, and every opponent's (armed or not) neighboring tiles
+    added as phantom occupants, so escape-route planning treats them as
+    blocked too.
 
-    The shield otherwise only reacts to bombs already in game_state["bombs"];
-    an opponent standing next to us could drop one on their very next turn
-    with zero warning. Merging this into "bombs" before computing danger
-    means every downstream check (move safety, escape_exists, our own BOMB
-    action's escape check) automatically accounts for it too, since they all
-    key off game_state["bombs"].
+    The bomb half: the shield otherwise only reacts to bombs already in
+    game_state["bombs"]; an opponent standing next to us could drop one on
+    their very next turn with zero warning. Merging this into "bombs" before
+    computing danger means every downstream check (move safety,
+    escape_exists, our own BOMB action's escape check) automatically
+    accounts for it too, since they all key off game_state["bombs"].
+
+    The neighbor half: shared.safety._occupied takes a single snapshot of
+    game_state["others"] and shared.safety.escape_exists reuses that same
+    snapshot as fixed for every step of its multi-step BFS -- it only ever
+    knows an opponent's *current* tile, never that they could walk into a
+    tile our plan is counting on being free one step from now. Phantom
+    entries at each opponent's neighbors (shaped like real (name, score,
+    bombs_left, pos) tuples so shared.safety._occupied picks them up for
+    free) make the BFS treat "an opponent could be here next" as blocked,
+    not just "an opponent is here now". This applies regardless of whether
+    the opponent is armed, since walking into our path doesn't need a bomb.
     """
     opponent_bombs = [(pos, BOMB_TIMER) for (_, _, bombs_left, pos) in game_state["others"] if bombs_left]
-    if not opponent_bombs:
+    field = game_state["field"]
+    width, height = field.shape
+    opponent_reach = [
+        ("__phantom__", 0, False, (ox + dx, oy + dy))
+        for (_, _, _, (ox, oy)) in game_state["others"]
+        for dx, dy in MOVE.values()
+        if 0 <= ox + dx < width and 0 <= oy + dy < height
+    ]
+    if not opponent_bombs and not opponent_reach:
         return game_state
-    return dict(game_state, bombs=game_state["bombs"] + opponent_bombs)
+    return dict(
+        game_state,
+        bombs=game_state["bombs"] + opponent_bombs,
+        others=game_state["others"] + opponent_reach,
+    )
 
 
 def shield_mask(game_state):
