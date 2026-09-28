@@ -1,0 +1,21 @@
+{
+  "tag": "ppo_s4_huntfix_e05_rule_4000",
+  "git_commit": "20428f6",
+  "agent": "ppo_agent",
+  "stage": 4,
+  "scenario": "classic",
+  "opponents": [
+    "rule_based_agent"
+  ],
+  "episodes": 4000,
+  "training_seed_count": 200,
+  "fresh": true,
+  "variant": "huntfix_e05",
+  "init_variant": "huntfix_e05",
+  "entropy_coefficient": 0.05,
+  "elapsed_seconds": 2821.17,
+  "model_file": "agent_code/ppo_agent/model_stage4_huntfix_e05.pt",
+  "total_steps": 3850589,
+  "optimized_steps": 3850589,
+  "stage_training_round": 4000
+}

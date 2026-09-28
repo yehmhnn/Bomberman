@@ -1,0 +1,21 @@
+{
+  "tag": "ppo_s3_huntfix_e05_coin_2000",
+  "git_commit": "87c6220",
+  "agent": "ppo_agent",
+  "stage": 3,
+  "scenario": "classic",
+  "opponents": [
+    "coin_collector_agent"
+  ],
+  "episodes": 2000,
+  "training_seed_count": 200,
+  "fresh": false,
+  "variant": "huntfix_e05",
+  "init_variant": "huntfix_e05",
+  "entropy_coefficient": 0.05,
+  "elapsed_seconds": 1564.52,
+  "model_file": "agent_code/ppo_agent/model_stage3_huntfix_e05.pt",
+  "total_steps": 2530646,
+  "optimized_steps": 2530646,
+  "stage_training_round": 4000
+}

@@ -1,0 +1,21 @@
+{
+  "tag": "ppo_s3_huntfix_e05_peaceful_2000",
+  "git_commit": "c3a8774",
+  "agent": "ppo_agent",
+  "stage": 3,
+  "scenario": "classic",
+  "opponents": [
+    "peaceful_agent"
+  ],
+  "episodes": 2000,
+  "training_seed_count": 200,
+  "fresh": true,
+  "variant": "huntfix_e05",
+  "init_variant": "goalfix_e05",
+  "entropy_coefficient": 0.05,
+  "elapsed_seconds": 1599.51,
+  "model_file": "agent_code/ppo_agent/model_stage3_huntfix_e05.pt",
+  "total_steps": 1861758,
+  "optimized_steps": 1861758,
+  "stage_training_round": 2000
+}

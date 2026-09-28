@@ -6,7 +6,7 @@ import queue
 from collections import defaultdict
 from inspect import signature
 from io import BytesIO
-from time import time
+from time import perf_counter
 from types import SimpleNamespace
 from typing import Tuple, Any
 
@@ -244,9 +244,13 @@ class AgentRunner:
 
         try:
             self.wlogger.debug(f"Calling {event_name} on callback.")
-            start_time = time()
+            # Duration measurements must use a monotonic clock. ``time()``
+            # can jump when the system clock is corrected or a laptop resumes,
+            # falsely turning a sub-millisecond callback into a many-minute
+            # timeout in the saved evaluation statistics.
+            start_time = perf_counter()
             event_result = getattr(module, event_name)(self.fake_self, *event_args)
-            duration = time() - start_time
+            duration = perf_counter() - start_time
             self.wlogger.debug(f"Got result from callback#{event_name} in {duration:.3f}s.")
 
             self.result_queue.put((event_name, duration, event_result))

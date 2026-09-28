@@ -1,0 +1,17 @@
+{
+  "tag": "ppo_s1_seeded_1000",
+  "git_commit": "fb41008",
+  "agent": "ppo_agent",
+  "stage": 1,
+  "scenario": "coin-heaven",
+  "opponents": [],
+  "episodes": 1000,
+  "training_seed_count": 200,
+  "fresh": true,
+  "elapsed_seconds": null,
+  "elapsed_note": "invalidated: system suspend/clock adjustment affected the pre-fix wall-clock timer",
+  "model_file": "agent_code/ppo_agent/model_stage1.pt",
+  "total_steps": 301056,
+  "optimized_steps": 301056,
+  "stage_training_round": 1000
+}

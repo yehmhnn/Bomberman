@@ -41,6 +41,11 @@ same 35-value representation and action shield as `dqn_agent`. See
 and completed compatibility checks, and `PPO_RESULTS.md` for the first
 validation measurements.
 
+Reproducible PPO curriculum runs use `evaluation/train_ppo.py`. The runner
+selects the shared training seeds, saves `model_stage1.pt` through
+`model_stage4.pt`, and preserves unfinished PPO rollouts between seed-specific
+game processes.
+
 The agents will be trained through the four project stages: coin collection,
 crate destruction and safe bombing, hunting non-aggressive opponents, and full
 competition. See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the experiment plan and
